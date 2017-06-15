@@ -1,0 +1,18 @@
+{
+  "name": "vizabi-sankey",
+  "main": "build/sankey.js",
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "link": "npm link ../vizabi",
+    "build": "cross-env NODE_ENV=production webpack --progress"
+  },
+  "devDependencies": {
+    "cross-env": "^5.0.1",
+    "vizabi-tool-bundler": "github:vizabi/vizabi-tool-bundler"
+  },
+  "dependencies": {
+    "d3-sankey": "^0.7.1"
+  }
+}
