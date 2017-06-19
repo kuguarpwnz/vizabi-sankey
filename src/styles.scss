@@ -1,1 +1,14 @@
-.empty {}
+@import "~bourbon/app/assets/stylesheets/bourbon";
+@import "~vizabi/src/assets/styles/mixins";
+@import "~vizabi/src/assets/styles/common";
+@import "~vizabi/src/assets/styles/chart";
+
+.vzb-tool {
+  .vzb-sankey {
+    @extend %vzb-chart-wrapper;
+    
+    &-svg {
+      @extend %vzb-chart-svg;
+    }
+  }
+}
