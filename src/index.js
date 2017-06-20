@@ -23,11 +23,11 @@ export default Vizabi.Tool.extend("Sankey", {
         placeholder: ".vzb-tool-dialogs",
         model: ["state", "ui", "locale"]
       },
-      // {
-      //   component: Vizabi.Component.get("buttonlist"),
-      //   placeholder: ".vzb-tool-buttonlist",
-      //   model: ["state", "ui", "locale"]
-      // },
+      {
+        component: Vizabi.Component.get("buttonlist"),
+        placeholder: ".vzb-tool-buttonlist",
+        model: ["state", "ui", "locale"]
+      },
       // {
       //   component: Vizabi.Component.get("treemenu"),
       //   placeholder: ".vzb-tool-treemenu",
