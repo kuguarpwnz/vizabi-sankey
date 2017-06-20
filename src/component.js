@@ -146,11 +146,15 @@ const Sankey = Vizabi.Component.extend({
 
     this._links.exit().remove();
 
+    var _this = this;
     this._links = this._links
       .enter().append("path")
       .merge(this._links)
       .attr("d", sankeyLinkHorizontal())
-      .attr("stroke-width", d => Math.max(1, d.width));
+      .attr("stroke-width", d => Math.max(1, d.width))
+      .attr("stroke", d => {
+        return _this.model.marker.color.getScale()(this.values.color[d.source.name][d.target.name]);
+      });
 
     this._links.append("title")
       .text(d => d.source.name + " → " + d.target.name + "\n" + this._format(d.value));
@@ -187,6 +191,7 @@ const Sankey = Vizabi.Component.extend({
       .attr("y", d => (d.y1 + d.y0) / 2)
       .attr("dy", "0.35em")
       .attr("text-anchor", "end")
+      .attr("font-size", d => d.value*2 + 10)
       .text(d => d.name)
       .filter(d => d.x0 < this._width / 2)
       .attr("x", d => d.x1 + this._settings.labelPadding)
