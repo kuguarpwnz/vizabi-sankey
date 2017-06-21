@@ -94,18 +94,16 @@ const Sankey = Vizabi.Component.extend({
 
     this._resizeSankey();
 
-    this._links = this._svg.append("g")
+    this._linksContainer = this._svg.append("g")
       .attr("class", "links")
       .attr("fill", "none")
       .attr("stroke", "#000")
-      .attr("stroke-opacity", 0.2)
-      .selectAll("path");
+      .attr("stroke-opacity", 0.2);
 
-    this._nodes = this._svg.append("g")
+    this._nodesContainer = this._svg.append("g")
       .attr("class", "nodes")
       .attr("font-family", "sans-serif")
-      .attr("font-size", 10)
-      .selectAll("g");
+      .attr("font-size", 10);
   },
 
 
@@ -141,44 +139,39 @@ const Sankey = Vizabi.Component.extend({
   },
 
   _redrawLinks() {
-    this._links = this._links
+    const links = this._linksContainer.selectAll("path")
       .data(this._graph.links);
 
-    this._links.exit().remove();
+    links.exit().remove();
 
-    var _this = this;
-    this._links = this._links
-      .enter().append("path")
-      .merge(this._links)
+    const linksEnter = links.enter().append("path");
+
+    const mergedLinks = links.merge(linksEnter);
+
+    const colorScale = this.model.marker.color.getScale();
+    mergedLinks
       .attr("d", sankeyLinkHorizontal())
       .attr("stroke-width", d => Math.max(1, d.width))
-      .attr("stroke", d => {
-        return _this.model.marker.color.getScale()(this.values.color[d.source.name][d.target.name]);
-      });
+      .attr("stroke", d => colorScale(this.values.color[d.source.name][d.target.name]));
 
-    this._links.append("title")
+    mergedLinks.select("title")
       .text(d => d.source.name + " → " + d.target.name + "\n" + this._format(d.value));
   },
 
   _redrawNodes() {
-    this._nodes = this._nodes
+    const nodes = this._nodesContainer.selectAll("g")
       .data(this._graph.nodes);
 
-    this._nodes.exit().remove();
+    nodes.exit().remove();
 
-    this._nodes = this._nodes
-      .enter().append("g")
-      .each(function() {
-        const $this = d3.select(this);
+    const nodesEnter = nodes.enter().append("g");
+    nodesEnter.append("rect");
+    nodesEnter.append("text");
+    nodesEnter.append("title");
 
-        $this.append("rect");
-        $this.append("text");
-        $this.append("title");
-      })
-      .merge(this._nodes);
+    const mergedNodes = nodes.merge(nodesEnter);
 
-    this._nodes
-      .selectAll("rect")
+    mergedNodes.select("rect")
       .attr("x", d => d.x0)
       .attr("y", d => d.y0)
       .attr("height", d => d.y1 - d.y0)
@@ -186,18 +179,18 @@ const Sankey = Vizabi.Component.extend({
       .attr("fill", d => this._color(d.name.replace(/ .*/, "")))
       .attr("stroke", "#000");
 
-    this._nodes.selectAll("text")
+    mergedNodes.select("text")
       .attr("x", d => d.x0 - this._settings.labelPadding)
       .attr("y", d => (d.y1 + d.y0) / 2)
       .attr("dy", "0.35em")
       .attr("text-anchor", "end")
-      .attr("font-size", d => d.value*2 + 10)
+      // .attr("font-size", d => d.value * 2 + 10)
       .text(d => d.name)
       .filter(d => d.x0 < this._width / 2)
       .attr("x", d => d.x1 + this._settings.labelPadding)
       .attr("text-anchor", "start");
 
-    this._nodes.selectAll("title")
+    mergedNodes.select("title")
       .text(d => d.name + "\n" + this._format(d.value));
   },
 
