@@ -117,11 +117,6 @@ const Sankey = Vizabi.Component.extend({
     this._resizeSankey();
 
     // TODO: extract styles to css
-    this._nodesContainer = this._svg.append("g")
-      .attr("class", this.css.classes.nodesContainer)
-      .attr("font-family", "sans-serif")
-      .attr("font-size", 10);
-
     this._linksContainer = this._svg.append("g")
       .attr("class", this.css.classes.linksContainer)
       .attr("fill", "none")
@@ -134,6 +129,10 @@ const Sankey = Vizabi.Component.extend({
       .attr("stroke", "#000")
       .attr("stroke-opacity", 0.5);
 
+    this._nodesContainer = this._svg.append("g")
+      .attr("class", this.css.classes.nodesContainer)
+      .attr("font-family", "sans-serif")
+      .attr("font-size", 10);
   },
 
 
