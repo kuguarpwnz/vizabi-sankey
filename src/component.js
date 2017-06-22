@@ -53,7 +53,7 @@ const Sankey = Vizabi.Component.extend({
 
   _initBasics() {
     this._element = d3.select(this.element);
-    this._svg = this._element.select(this.css.dot(this.css.classes.svg));
+    this._svg = this._element.select(this._css.dot(this._css.classes.svg));
 
     const formatNumber = d3.format(",.0f");
     this._format = d => `${formatNumber(d)} TWh`;
@@ -69,21 +69,26 @@ const Sankey = Vizabi.Component.extend({
       nodeWidth: 15,
       nodePadding: 15,
       labelPadding: 5,
-      sankeyPadding: 10,
     };
 
-    this.profiles = {
-      small: {},
+    this._profiles = {
+      small: {
+        margin: { top: 10, left: 10, bottom: 10, right: 10 }
+      },
+      medium: {
+        margin: { top: 10, left: 10, bottom: 10, right: 10 }
+      },
+      large: {
+        margin: { top: 10, left: 10, bottom: 10, right: 10 }
+      },
+    };
+
+    this._presentationProfiles = {
       medium: {},
       large: {},
     };
 
-    this.presentationProfiles = {
-      medium: {},
-      large: {},
-    };
-
-    this.css = {
+    this._css = {
       dot: classNames => (
         classNames
           .split(" ")
@@ -114,46 +119,55 @@ const Sankey = Vizabi.Component.extend({
       .nodeWidth(this._settings.nodeWidth)
       .nodePadding(this._settings.nodePadding);
 
-    this._resizeSankey();
-
     // TODO: extract styles to css
     this._linksContainer = this._svg.append("g")
-      .attr("class", this.css.classes.linksContainer)
+      .attr("class", this._css.classes.linksContainer)
       .attr("fill", "none")
       .attr("stroke", "#000")
       .attr("stroke-opacity", 0.2);
 
     this._gradientLinksContainer = this._svg.append("g")
-      .attr("class", this.css.classes.gradientLinksContainer)
+      .attr("class", this._css.classes.gradientLinksContainer)
       .attr("fill", "none")
       .attr("stroke", "#000")
-      .attr("stroke-opacity", 0.5);
+      .attr("stroke-opacity", 0.7);
 
     this._nodesContainer = this._svg.append("g")
-      .attr("class", this.css.classes.nodesContainer)
+      .attr("class", this._css.classes.nodesContainer)
       .attr("font-family", "sans-serif")
       .attr("font-size", 10);
   },
 
 
   async ready() {
+    this._setProfile();
+    this._resizeSankey();
+
     await this._updateValues();
     this._redraw();
   },
 
   resize() {
+    this._setProfile();
     this._calculateSize();
     this._resizeSankey();
     this._redraw();
   },
 
+  _setProfile() {
+    this._activeProfile = this.getActiveProfile(this._profiles, this._presentationProfiles);
+  },
+
   _resizeSankey() {
-    const { sankeyPadding } = this._settings;
+    const { margin } = this._activeProfile;
 
     this._sankey
-      .extent([[sankeyPadding, sankeyPadding], [
-        this._width - sankeyPadding,
-        this._height - sankeyPadding,
+      .extent([[
+        margin.left,
+        margin.top,
+      ], [
+        this._width - margin.right,
+        this._height - margin.bottom,
       ]]);
   },
 
@@ -173,18 +187,19 @@ const Sankey = Vizabi.Component.extend({
   },
 
   _redrawDefaultLinks() {
-    const links = this._linksContainer.selectAll(this.css.dot(this.css.classes.link))
+    const links = this._linksContainer.selectAll(this._css.dot(this._css.classes.link))
       .data(this._graph.links);
 
     links.exit().remove();
 
     const linksEnter = links.enter().append("path")
-      .attr("class", this.css.classes.link);
+      .attr("class", this._css.classes.link);
 
     const mergedLinks = this._links = links.merge(linksEnter);
 
     const colorScale = this.model.marker.color.getScale();
     mergedLinks
+      .transition().duration(300)
       .attr("d", sankeyLinkHorizontal())
       .attr("stroke-width", d => Math.max(1, d.width))
       .attr("stroke", d => colorScale(this.values.color[d.source.name][d.target.name]));
@@ -194,13 +209,13 @@ const Sankey = Vizabi.Component.extend({
   },
 
   _redrawGradientLinks() {
-    const gradientLinks = this._gradientLinksContainer.selectAll(this.css.dot(this.css.classes.gradientLink))
+    const gradientLinks = this._gradientLinksContainer.selectAll(this._css.dot(this._css.classes.gradientLink))
       .data(this._graph.links);
 
     gradientLinks.exit().remove();
 
     const gradientLinksEnter = gradientLinks.enter().append("path")
-      .attr("class", this.css.classes.gradientLink);
+      .attr("class", this._css.classes.gradientLink);
 
     const mergedGradientLinks = this._gradientLinks = gradientLinks.merge(gradientLinksEnter);
 
@@ -256,13 +271,13 @@ const Sankey = Vizabi.Component.extend({
   },
 
   _redrawNodes() {
-    const nodes = this._nodesContainer.selectAll(this.css.dot(this.css.classes.node))
+    const nodes = this._nodesContainer.selectAll(this._css.dot(this._css.classes.node))
       .data(this._graph.nodes);
 
     nodes.exit().remove();
 
     const nodesEnter = nodes.enter().append("g")
-      .attr("class", this.css.classes.node);
+      .attr("class", this._css.classes.node);
     nodesEnter.append("rect");
     nodesEnter.append("text");
     nodesEnter.append("title");
@@ -279,6 +294,7 @@ const Sankey = Vizabi.Component.extend({
       });
 
     mergedNodes.select("rect")
+      .transition().duration(300)
       .attr("x", d => d.x0)
       .attr("y", d => d.y0)
       .attr("height", d => d.y1 - d.y0)
@@ -287,6 +303,7 @@ const Sankey = Vizabi.Component.extend({
       .attr("stroke", "#000");
 
     mergedNodes.select("text")
+      .transition().duration(300)
       .attr("x", d => d.x0 - this._settings.labelPadding)
       .attr("y", d => (d.y1 + d.y0) / 2)
       .attr("dy", "0.35em")
@@ -303,7 +320,7 @@ const Sankey = Vizabi.Component.extend({
 
   _animateBranch(nodeData) {
     const nextLayerNodeData = [];
-    const links = this._gradientLinksContainer.selectAll(this.css.dot(this.css.classes.gradientLink))
+    const links = this._gradientLinksContainer.selectAll(this._css.dot(this._css.classes.gradientLink))
       .filter(gradientData => {
         const result = nodeData.sourceLinks.includes(gradientData);
         result && nextLayerNodeData.push(gradientData.target);
