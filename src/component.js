@@ -222,7 +222,8 @@ const Sankey = Vizabi.Component.extend({
 
     const id = `c-${sourceColor}-to-${targetColor}`;
     if (!this._svg.select(`#${id}`).node()) {
-      const gradient = this._svg.append("defs")
+      const defs = this._svg.select("defs");
+      const gradient = (defs.size() ? defs : this._svg.append("defs"))
         .append("linearGradient")
         .attr("id", id)
         .attr("x1", "0%")
