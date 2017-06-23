@@ -51,13 +51,13 @@ const Sankey = Component.extend({
     this._initSettings();
     this._initBasics();
     this._initHeader();
+    this._initFooter();
     this._initSankey();
   },
 
   _initBasics() {
     this._element = d3.select(this.element);
     this._svg = this._element.select(this._css.dot(this._css.classes.svg));
-    this._header = this._svg.select(this._css.dot(this._css.classes.header));
     this._defs = this._svg.select("defs");
 
     const formatNumber = d3.format(",.0f");
@@ -81,16 +81,16 @@ const Sankey = Component.extend({
 
     this._profiles = {
       small: {
-        infoSize: 16,
-        margin: { top: 10, left: 10, bottom: 10, right: 10 }
+        iconSize: 16,
+        margin: { top: 10, left: 10, bottom: 10, right: 10 },
       },
       medium: {
-        infoSize: 16,
-        margin: { top: 10, left: 10, bottom: 10, right: 10 }
+        iconSize: 16,
+        margin: { top: 10, left: 10, bottom: 10, right: 10 },
       },
       large: {
-        infoSize: 16,
-        margin: { top: 10, left: 10, bottom: 10, right: 10 }
+        iconSize: 16,
+        margin: { top: 10, left: 10, bottom: 10, right: 10 },
       },
     };
 
@@ -106,7 +106,10 @@ const Sankey = Component.extend({
         svg: "vzb-sankey-svg",
         header: "vzb-sankey-header",
         headerText: "vzb-sankey-header-text",
-        info: "vzb-sankey-info",
+        footer: "vzb-sankey-footer",
+        footerText: "vzb-sankey-footer-text",
+        info: "vzb-data-info-icon",
+        warning: "vzb-data-warning-icon",
         nodesContainer: "nodes-container",
         node: "node",
         linksContainer: "links-container",
@@ -123,9 +126,28 @@ const Sankey = Component.extend({
   },
 
   _initHeader() {
-    const _this = this;
+    this._header = this._svg.select(this._css.dot(this._css.classes.header));
 
-    this._headerText = this._header.select(this._css.dot(this._css.classes.headerText));
+    this._initHeaderText();
+    this._initHeaderInfo();
+  },
+
+  _initHeaderText() {
+    this._headerText = this._header.select(this._css.dot(this._css.classes.headerText))
+      .on("click", () =>
+        // TODO: fix
+        this.parent
+          .findChildByName("gapminder-treemenu")
+          .markerID("axis_x")
+          .alignX("left")
+          .alignY("top")
+          .updateView()
+          .toggle()
+      );
+  },
+
+  _initHeaderInfo() {
+    const _this = this;
 
     this._info = this._header.select(this._css.dot(this._css.classes.info))
       .on("mouseover", function() {
@@ -141,6 +163,35 @@ const Sankey = Component.extend({
       })
       .on("mouseout", () => _this.parent.findChildByName("gapminder-datanotes").hide())
       .on("click", () => this.parent.findChildByName("gapminder-datanotes").pin());
+
+    utils.setIcon(this._info, iconset.question)
+      .select("svg")
+      .attr("width", 0)
+      .attr("height", 0);
+  },
+
+  _initFooter() {
+    this._footer = this._svg.selectAll(this._css.dot(this._css.classes.footer));
+
+    this._initFooterText();
+    this._initFooterWarning();
+  },
+
+  _initFooterText() {
+    this._footerText = this._footer.select(this._css.dot(this._css.classes.footerText))
+      .text(this._translator("hints/dataWarning"));
+  },
+
+  _initFooterWarning() {
+    this._warning = this._footer.select(this._css.dot(this._css.classes.warning))
+      .on("mouseover", () => this._updateDoubtOpaciy(1))
+      .on("mouseout", () => this._updateDoubtOpaciy(0))
+      .on("click", () => this.parent.findChildByName("gapminder-datawarning").toggle());
+
+    utils.setIcon(this._warning, iconset.warn)
+      .select("svg")
+      .attr("width", 0)
+      .attr("height", 0);
   },
 
   _initSankey() {
@@ -149,9 +200,7 @@ const Sankey = Component.extend({
       .nodePadding(this._settings.nodePadding);
 
     this._linksContainer = this._svg.select(this._css.dot(this._css.classes.linksContainer));
-
     this._gradientLinksContainer = this._svg.select(this._css.dot(this._css.classes.gradientLinksContainer));
-
     this._nodesContainer = this._svg.select(this._css.dot(this._css.classes.nodesContainer));
   },
 
@@ -161,6 +210,7 @@ const Sankey = Component.extend({
 
     await this._updateValues();
     this._redrawHeader();
+    this._redrawFooter();
     this._resizeSankey();
     this._redraw();
   },
@@ -169,6 +219,7 @@ const Sankey = Component.extend({
     this._setProfile();
     this._calculateSize();
     this._redrawHeader();
+    this._redrawFooter();
     this._resizeSankey();
     this._redraw();
   },
@@ -181,18 +232,23 @@ const Sankey = Component.extend({
     const headerTextBBox = this._header.select(this._css.dot(this._css.classes.headerText))
       .node().getBBox();
 
+    const footerTextBBox = this._footer.select(this._css.dot(this._css.classes.footerText))
+      .node().getBBox();
+
     this._sankey
       .extent([[
         this._activeProfile.margin.left,
         this._activeProfile.margin.top + headerTextBBox.height,
       ], [
         this._width - this._activeProfile.margin.right,
-        this._height - this._activeProfile.margin.bottom,
+        this._height - this._activeProfile.margin.bottom - footerTextBBox.height,
       ]]);
   },
 
   _redraw() {
-    this._redrawSankey();
+    this._sankey(this._graph);
+    this._redrawLinks();
+    this._redrawNodes();
   },
 
   _redrawHeader() {
@@ -203,24 +259,49 @@ const Sankey = Component.extend({
 
     const headerTextBBox = this._headerText.node().getBBox();
 
-    const tx = this._activeProfile.margin.left + headerTextBBox.width + this._settings.iconMargin;
-    const ty = this._activeProfile.margin.top;
+    const infoPosition = {
+      x: this._activeProfile.margin.left + headerTextBBox.width + this._settings.iconMargin,
+      y: this._activeProfile.margin.top,
+    };
 
-    utils.setIcon(this._info, iconset.question)
-      .attr("transform", `translate(${tx}, ${ty})`)
+    this._info
+      .attr("transform", `translate(${infoPosition.x}, ${infoPosition.y})`)
       .select("svg")
-      .attr("width", this._activeProfile.infoSize)
-      .attr("height", this._activeProfile.infoSize);
+      .attr("width", this._activeProfile.iconSize)
+      .attr("height", this._activeProfile.iconSize);
   },
 
-  _updateDoubtOpacity(opacity = 0) {
+  _redrawFooter() {
+    const footerTextBBox = this._footerText.node().getBBox();
 
+    const textPosition = {
+      x: this._width - this._activeProfile.margin.right - footerTextBBox.width,
+      y: this._height - this._activeProfile.margin.bottom,
+    };
+
+    this._footerText
+      .attr("transform", `translate(${textPosition.x}, ${textPosition.y})`);
+
+    const warningPosition = {
+      x: (
+        this._width
+        - this._activeProfile.margin.right
+        - footerTextBBox.width
+        - this._activeProfile.iconSize
+        - this._settings.iconMargin
+      ),
+      y: this._height - this._activeProfile.margin.bottom - this._activeProfile.iconSize,
+    };
+
+    this._warning
+      .attr("transform", `translate(${warningPosition.x}, ${warningPosition.y})`)
+      .select("svg")
+      .attr("width", this._activeProfile.iconSize)
+      .attr("height", this._activeProfile.iconSize);
   },
 
-  _redrawSankey() {
-    this._sankey(this._graph);
-    this._redrawLinks();
-    this._redrawNodes();
+  _updateDoubtOpaciy(opaciy = 0) {
+
   },
 
   _redrawLinks() {
