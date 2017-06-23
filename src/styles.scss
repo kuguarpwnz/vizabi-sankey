@@ -6,9 +6,36 @@
 .vzb-tool {
   .vzb-sankey {
     @extend %vzb-chart-wrapper;
-    
+
+    &-header {
+      &-text {
+        dominant-baseline: hanging;
+      }
+    }
+
+    &-chart {
+      .links-container {
+        fill: none;
+        stroke-opacity: 0.2;
+      }
+
+      .gradient-links-container {
+        fill: none;
+        stroke-opacity: 0.7;
+      }
+
+      .nodes-container {
+        font-family: sans-serif;
+        font-size: 10px;
+      }
+    }
+
     &-svg {
       @extend %vzb-chart-svg;
+    }
+
+    &-info {
+      @extend %vzb-chart-info;
     }
   }
 }

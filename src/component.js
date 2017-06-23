@@ -1,10 +1,12 @@
 import { sankey, sankeyLinkHorizontal } from "d3-sankey";
 
 const {
+  Component,
   utils,
+  iconset,
 } = Vizabi;
 
-const Sankey = Vizabi.Component.extend({
+const Sankey = Component.extend({
 
   init(config, context) {
     this.name = "sankey-component";
@@ -48,18 +50,23 @@ const Sankey = Vizabi.Component.extend({
   readyOnce() {
     this._initSettings();
     this._initBasics();
+    this._initHeader();
     this._initSankey();
   },
 
   _initBasics() {
     this._element = d3.select(this.element);
     this._svg = this._element.select(this._css.dot(this._css.classes.svg));
+    this._header = this._svg.select(this._css.dot(this._css.classes.header));
+    this._defs = this._svg.select("defs");
 
     const formatNumber = d3.format(",.0f");
     this._format = d => `${formatNumber(d)} TWh`;
 
     const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
     this._color = value => colorScale(value.replace(/ .*/, ""));
+
+    this._translator = this.model.locale.getTFunction();
 
     this._calculateSize();
   },
@@ -69,16 +76,20 @@ const Sankey = Vizabi.Component.extend({
       nodeWidth: 15,
       nodePadding: 15,
       labelPadding: 5,
+      iconMargin: 5,
     };
 
     this._profiles = {
       small: {
+        infoSize: 16,
         margin: { top: 10, left: 10, bottom: 10, right: 10 }
       },
       medium: {
+        infoSize: 16,
         margin: { top: 10, left: 10, bottom: 10, right: 10 }
       },
       large: {
+        infoSize: 16,
         margin: { top: 10, left: 10, bottom: 10, right: 10 }
       },
     };
@@ -89,22 +100,19 @@ const Sankey = Vizabi.Component.extend({
     };
 
     this._css = {
-      dot: classNames => (
-        classNames
-          .split(" ")
-          .filter(Boolean)
-          .map(c => `.${c}`)
-          .join(" ")
-      ),
+      dot: classNames => classNames.split(" ").filter(Boolean).map(c => `.${c}`).join(" "),
 
       classes: {
         svg: "vzb-sankey-svg",
+        header: "vzb-sankey-header",
+        headerText: "vzb-sankey-header-text",
+        info: "vzb-sankey-info",
         nodesContainer: "nodes-container",
         node: "node",
         linksContainer: "links-container",
         link: "link",
         gradientLinksContainer: "gradient-links-container",
-        gradientLink: "gradient-link"
+        gradientLink: "gradient-link",
       },
     };
   },
@@ -114,42 +122,53 @@ const Sankey = Vizabi.Component.extend({
     this._height = utils.px2num(this._element.style("height"));
   },
 
+  _initHeader() {
+    const _this = this;
+
+    this._headerText = this._header.select(this._css.dot(this._css.classes.headerText));
+
+    this._info = this._header.select(this._css.dot(this._css.classes.info))
+      .on("mouseover", function() {
+        // TODO: check + fix
+        const rect = this.getBBox();
+        const ctx = utils.makeAbsoluteContext(this, this.farthestViewportElement);
+        const coord = ctx(rect.x - 10, rect.y + rect.height + 10);
+
+        _this.parent.findChildByName("gapminder-datanotes")
+          .setHook("axis_x")
+          .show()
+          .setPos(coord.x, coord.y);
+      })
+      .on("mouseout", () => _this.parent.findChildByName("gapminder-datanotes").hide())
+      .on("click", () => this.parent.findChildByName("gapminder-datanotes").pin());
+  },
+
   _initSankey() {
     this._sankey = sankey()
       .nodeWidth(this._settings.nodeWidth)
       .nodePadding(this._settings.nodePadding);
 
-    // TODO: extract styles to css
-    this._linksContainer = this._svg.append("g")
-      .attr("class", this._css.classes.linksContainer)
-      .attr("fill", "none")
-      .attr("stroke", "#000")
-      .attr("stroke-opacity", 0.2);
+    this._linksContainer = this._svg.select(this._css.dot(this._css.classes.linksContainer));
 
-    this._gradientLinksContainer = this._svg.append("g")
-      .attr("class", this._css.classes.gradientLinksContainer)
-      .attr("fill", "none")
-      .attr("stroke", "#000")
-      .attr("stroke-opacity", 0.7);
+    this._gradientLinksContainer = this._svg.select(this._css.dot(this._css.classes.gradientLinksContainer));
 
-    this._nodesContainer = this._svg.append("g")
-      .attr("class", this._css.classes.nodesContainer)
-      .attr("font-family", "sans-serif")
-      .attr("font-size", 10);
+    this._nodesContainer = this._svg.select(this._css.dot(this._css.classes.nodesContainer));
   },
 
 
   async ready() {
     this._setProfile();
-    this._resizeSankey();
 
     await this._updateValues();
+    this._redrawHeader();
+    this._resizeSankey();
     this._redraw();
   },
 
   resize() {
     this._setProfile();
     this._calculateSize();
+    this._redrawHeader();
     this._resizeSankey();
     this._redraw();
   },
@@ -159,20 +178,43 @@ const Sankey = Vizabi.Component.extend({
   },
 
   _resizeSankey() {
-    const { margin } = this._activeProfile;
+    const headerTextBBox = this._header.select(this._css.dot(this._css.classes.headerText))
+      .node().getBBox();
 
     this._sankey
       .extent([[
-        margin.left,
-        margin.top,
+        this._activeProfile.margin.left,
+        this._activeProfile.margin.top + headerTextBBox.height,
       ], [
-        this._width - margin.right,
-        this._height - margin.bottom,
+        this._width - this._activeProfile.margin.right,
+        this._height - this._activeProfile.margin.bottom,
       ]]);
   },
 
   _redraw() {
     this._redrawSankey();
+  },
+
+  _redrawHeader() {
+    // TODO: change text to .getConceptProps().name
+    this._headerText
+      .text("HEADER TEXT")
+      .attr("transform", `translate(${this._activeProfile.margin.left}, ${this._activeProfile.margin.top})`);
+
+    const headerTextBBox = this._headerText.node().getBBox();
+
+    const tx = this._activeProfile.margin.left + headerTextBBox.width + this._settings.iconMargin;
+    const ty = this._activeProfile.margin.top;
+
+    utils.setIcon(this._info, iconset.question)
+      .attr("transform", `translate(${tx}, ${ty})`)
+      .select("svg")
+      .attr("width", this._activeProfile.infoSize)
+      .attr("height", this._activeProfile.infoSize);
+  },
+
+  _updateDoubtOpacity(opacity = 0) {
+
   },
 
   _redrawSankey() {
@@ -236,9 +278,8 @@ const Sankey = Vizabi.Component.extend({
     ].map(name => this._color(name).replace("#", ""));
 
     const id = `c-${sourceColor}-to-${targetColor}`;
-    if (!this._svg.select(`#${id}`).node()) {
-      const defs = this._svg.select("defs");
-      const gradient = (defs.size() ? defs : this._svg.append("defs"))
+    if (!this._defs.select("#" + id).node()) {
+      const gradient = this._defs
         .append("linearGradient")
         .attr("id", id)
         .attr("x1", "0%")
@@ -278,6 +319,7 @@ const Sankey = Vizabi.Component.extend({
 
     const nodesEnter = nodes.enter().append("g")
       .attr("class", this._css.classes.node);
+
     nodesEnter.append("rect");
     nodesEnter.append("text");
     nodesEnter.append("title");
