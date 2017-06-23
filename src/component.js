@@ -408,7 +408,7 @@ const Sankey = Component.extend({
     const mergedNodes = this._nodes = nodes.merge(nodesEnter);
 
     mergedNodes
-      .on("mouseover", (...args) => this._animateBranch(...args))
+      .on("mouseover", d => this._animateBranch(d))
       .on("mouseout", () => {
         this._gradientLinks.transition();
         this._gradientLinks
@@ -422,8 +422,7 @@ const Sankey = Component.extend({
       .attr("y", d => d.y0)
       .attr("height", d => d.y1 - d.y0)
       .attr("width", d => d.x1 - d.x0)
-      .attr("fill", d => this._color(d.name))
-      .attr("stroke", "#000");
+      .attr("fill", d => this._color(d.name));
 
     mergedNodes.select("text")
       .transition().duration(300)
