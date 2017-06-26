@@ -229,19 +229,17 @@ const Sankey = Component.extend({
   },
 
   _resizeSankey() {
-    const headerTextBBox = this._header.select(this._css.dot(this._css.classes.headerText))
-      .node().getBBox();
+    const headerBBox = this._header.node().getBBox();
 
-    const footerTextBBox = this._footer.select(this._css.dot(this._css.classes.footerText))
-      .node().getBBox();
+    const footerBBox = this._footer.node().getBBox();
 
     this._sankey
       .extent([[
         this._activeProfile.margin.left,
-        this._activeProfile.margin.top + headerTextBBox.height,
+        this._activeProfile.margin.top * 2 + headerBBox.height,
       ], [
         this._width - this._activeProfile.margin.right,
-        this._height - this._activeProfile.margin.bottom - footerTextBBox.height,
+        this._height - this._activeProfile.margin.bottom * 2 - footerBBox.height,
       ]]);
   },
 
@@ -254,10 +252,17 @@ const Sankey = Component.extend({
   _redrawHeader() {
     // TODO: change text to .getConceptProps().name
     this._headerText
-      .text("HEADER TEXT")
-      .attr("transform", `translate(${this._activeProfile.margin.left}, ${this._activeProfile.margin.top})`);
+      .text("HEADER TEXT");
 
     const headerTextBBox = this._headerText.node().getBBox();
+
+    const headerTextPosition = {
+      x: this._activeProfile.margin.left,
+      y: this._activeProfile.margin.top + headerTextBBox.height,
+    };
+
+    this._headerText
+      .attr("transform", `translate(${headerTextPosition.x}, ${headerTextPosition.y})`);
 
     const infoPosition = {
       x: this._activeProfile.margin.left + headerTextBBox.width + this._settings.iconMargin,
@@ -346,10 +351,10 @@ const Sankey = Component.extend({
       .attr("d", sankeyLinkHorizontal())
       .attr("stroke-width", d => Math.max(1, d.width))
       .each(this._setDash)
-      .style("stroke", d => this._createGradientDefs(d));
+      .style("stroke", d => this._createGradientDef(d));
   },
 
-  _createGradientDefs(d) {
+  _createGradientDef(d) {
     const [
       sourceColor,
       targetColor
@@ -362,6 +367,7 @@ const Sankey = Component.extend({
     if (!this._defs.select("#" + id).node()) {
       const gradient = this._defs
         .append("linearGradient")
+        .attr("gradientUnits", "userSpaceOnUse")
         .attr("id", id)
         .attr("x1", "0%")
         .attr("y1", "0%")
@@ -442,14 +448,14 @@ const Sankey = Component.extend({
 
   _animateBranch(nodeData) {
     const nextLayerNodeData = [];
-    const links = this._gradientLinksContainer.selectAll(this._css.dot(this._css.classes.gradientLink))
+    const gradientLinks = this._gradientLinksContainer.selectAll(this._css.dot(this._css.classes.gradientLink))
       .filter(gradientData => {
         const result = nodeData.sourceLinks.includes(gradientData);
         result && nextLayerNodeData.push(gradientData.target);
         return result;
       });
 
-    links
+    gradientLinks
       .style("opacity", null)
       .transition()
       .duration(300)
@@ -503,9 +509,9 @@ const Sankey = Component.extend({
     return this._graph = graph;
   },
 
-  _updateValues() {
-    return this._getValues()
-      .then(() => this._buildGraph());
+  async _updateValues() {
+    await this._getValues();
+    this._buildGraph();
   },
 
 });
