@@ -36,10 +36,12 @@ const Sankey = Component.extend({
     ];
 
     this.model_binds = {
-      "change:time.value": async () => {
+      "change:time.value": () => {
         if (this._readyOnce) {
-          await this._updateValues();
-          this._redraw();
+          this._updateValues()
+            .then(() => {
+              this._redraw();
+            });
         }
       }
     };
@@ -205,14 +207,16 @@ const Sankey = Component.extend({
   },
 
 
-  async ready() {
+  ready() {
     this._setProfile();
 
-    await this._updateValues();
-    this._redrawHeader();
-    this._redrawFooter();
-    this._resizeSankey();
-    this._redraw();
+    this._updateValues()
+      .then(() => {
+        this._redrawHeader();
+        this._redrawFooter();
+        this._resizeSankey();
+        this._redraw();
+      });
   },
 
   resize() {
@@ -509,9 +513,9 @@ const Sankey = Component.extend({
     return this._graph = graph;
   },
 
-  async _updateValues() {
-    await this._getValues();
-    this._buildGraph();
+  _updateValues() {
+    return this._getValues()
+      .then(() => this._buildGraph());
   },
 
 });
