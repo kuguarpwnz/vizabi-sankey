@@ -6,7 +6,7 @@ const {
   iconset,
 } = Vizabi;
 
-const Sankey = Component.extend({
+const Sankey = Component.extend("sankey", {
 
   init(config, context) {
     this.name = "sankey-component";
