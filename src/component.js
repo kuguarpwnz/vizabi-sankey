@@ -199,7 +199,8 @@ const Sankey = Component.extend("sankey", {
   _initSankey() {
     this._sankey = sankey()
       .nodeWidth(this._settings.nodeWidth)
-      .nodePadding(this._settings.nodePadding);
+      .nodePadding(this._settings.nodePadding)
+      .sort(null);
 
     this._linksContainer = this._svg.select(this._css.dot(this._css.classes.linksContainer));
     this._gradientLinksContainer = this._svg.select(this._css.dot(this._css.classes.gradientLinksContainer));
