@@ -15,8 +15,7 @@ export default Vizabi.Tool.extend("Sankey", {
           "state.time",
           "state.entities",
           "state.marker",
-          "state.marker_nodes",
-          "state.marker_labels",
+          "state.marker_entities",
           "locale",
           "ui",
         ]

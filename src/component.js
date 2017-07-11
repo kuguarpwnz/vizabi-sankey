@@ -26,11 +26,7 @@ const Sankey = Component.extend("sankey", {
         type: "model"
       },
       {
-        name: "markerNodes",
-        type: "model"
-      },
-      {
-        name: "markerLabels",
+        name: "markerEntities",
         type: "model"
       },
       {
@@ -124,8 +120,6 @@ const Sankey = Component.extend("sankey", {
         node: "node",
         linksContainer: "links-container",
         link: "link",
-        gradientLinksContainer: "gradient-links-container",
-        gradientLink: "gradient-link",
       },
     };
   },
@@ -211,7 +205,6 @@ const Sankey = Component.extend("sankey", {
       .sort(null);
 
     this._linksContainer = this._svg.select(this._css.dot(this._css.classes.linksContainer));
-    this._gradientLinksContainer = this._svg.select(this._css.dot(this._css.classes.gradientLinksContainer));
     this._nodesContainer = this._svg.select(this._css.dot(this._css.classes.nodesContainer));
   },
 
@@ -322,58 +315,39 @@ const Sankey = Component.extend("sankey", {
   },
 
   _redrawLinks() {
-    this._redrawDefaultLinks();
-    this._redrawGradientLinks();
-  },
-
-  _redrawDefaultLinks() {
     const links = this._linksContainer.selectAll(this._css.dot(this._css.classes.link))
       .data(this._graph.links);
 
     links.exit().remove();
 
     const linksEnter = links.enter().append("path")
-      .attr("class", this._css.classes.link)
+      .attr("class", this._css.classes.link);
+
+    linksEnter
       .append("title");
 
     const mergedLinks = this._links = links.merge(linksEnter);
 
-    const colorScale = this.model.marker.color.getScale();
     mergedLinks
-      .transition().duration(300)
-      .attr("d", sankeyLinkHorizontal())
-      .attr("stroke-width", d => Math.max(1, d.width))
-      .attr("stroke", d => colorScale(this.values.color[d.source.name][d.target.name]));
-
-    mergedLinks.select("title")
-      .text(d => this.nodesLabels[d.source.name] + " → " + this.nodesLabels[d.target.name] + "\n" + this._format(d.value));
-  },
-
-  _redrawGradientLinks() {
-    const gradientLinks = this._gradientLinksContainer.selectAll(this._css.dot(this._css.classes.gradientLink))
-      .data(this._graph.links);
-
-    gradientLinks.exit().remove();
-
-    const gradientLinksEnter = gradientLinks.enter().append("path")
-      .attr("class", this._css.classes.gradientLink);
-
-    const mergedGradientLinks = this._gradientLinks = gradientLinks.merge(gradientLinksEnter);
-
-    mergedGradientLinks
       .attr("d", sankeyLinkHorizontal())
       .attr("stroke-width", d => Math.max(1, d.width))
       .each(this._setDash)
-      .style("stroke", d => this._createGradientDef(d));
+      .style("stroke", d => this._createDef(d));
+
+    mergedLinks.select("title")
+      .text(d =>
+        this.entities.label[d.source.name] + " → " + this.entities.label[d.target.name] + "\n" + this._format(d.value)
+      );
+
   },
 
-  _createGradientDef(d) {
+  _createDef(d) {
     const [
       sourceColor,
       targetColor,
     ] = [
-      this.nodesColors[d.source.name],
-      this.nodesColors[d.target.name],
+      this.entities.color[d.source.name],
+      this.entities.color[d.target.name],
     ].map(color => color.replace("#", ""));
 
     const id = `c-${sourceColor}-to-${targetColor}`;
@@ -407,8 +381,7 @@ const Sankey = Component.extend("sankey", {
     const totalLength = $this.node().getTotalLength();
 
     $this
-      .attr("stroke-dasharray", `${totalLength} ${totalLength}`)
-      .attr("stroke-dashoffset", totalLength);
+      .attr("stroke-dasharray", `${totalLength} ${totalLength}`);
   },
 
   _redrawNodes() {
@@ -426,22 +399,13 @@ const Sankey = Component.extend("sankey", {
 
     const mergedNodes = this._nodes = nodes.merge(nodesEnter);
 
-    mergedNodes
-      .on("mouseover", d => this._animateBranch(d))
-      .on("mouseout", () => {
-        this._gradientLinks.transition();
-        this._gradientLinks
-          .style("opacity", 0)
-          .each(this._setDash);
-      });
-
     mergedNodes.select("rect")
       .transition().duration(300)
       .attr("x", d => d.x0)
       .attr("y", d => d.y0)
       .attr("height", d => d.y1 - d.y0)
       .attr("width", d => d.x1 - d.x0)
-      .attr("fill", d => this.nodesColors[d.name]);
+      .attr("fill", d => this.entities.color[d.name]);
 
     mergedNodes.select("text")
       .transition().duration(300)
@@ -450,35 +414,13 @@ const Sankey = Component.extend("sankey", {
       .attr("dy", "0.35em")
       .attr("text-anchor", "end")
       // .attr("font-size", d => d.value * 2 + 10)
-      .text(d => this.nodesLabels[d.name])
+      .text(d => this.entities.label[d.name])
       .filter(d => d.x0 < this._width / 2)
       .attr("x", d => d.x1 + this._settings.labelPadding)
       .attr("text-anchor", "start");
 
     mergedNodes.select("title")
-      .text(d => this.nodesLabels[d.name] + "\n" + this._format(d.value));
-  },
-
-  _animateBranch(nodeData) {
-    const nextLayerNodeData = [];
-    const gradientLinks = this._gradientLinksContainer.selectAll(this._css.dot(this._css.classes.gradientLink))
-      .filter(gradientData => {
-        const result = nodeData.sourceLinks.includes(gradientData);
-        result && nextLayerNodeData.push(gradientData.target);
-        return result;
-      });
-
-    gradientLinks
-      .style("opacity", null)
-      .transition()
-      .duration(300)
-      .ease(d3.easeLinear)
-      .attr("stroke-dashoffset", 0)
-      .on("end", () =>
-        nextLayerNodeData.forEach(d =>
-          this._animateBranch(d)
-        )
-      );
+      .text(d => this.entities.label[d.name] + "\n" + this._format(d.value));
   },
 
   _getValues() {
@@ -489,13 +431,8 @@ const Sankey = Component.extend("sankey", {
         )
       ),
       new Promise(resolve =>
-        this.model.markerNodes.getFrame(this.model.time.value, ({ color }) =>
-          resolve(this.nodesColors = color)
-        )
-      ),
-      new Promise(resolve =>
-        this.model.markerLabels.getFrame(this.model.time.value, ({ label }) =>
-          resolve(this.nodesLabels = label)
+        this.model.markerEntities.getFrame(this.model.time.value, ({ color, label }) =>
+          resolve(Object.assign(this, { entities: { color, label } }))
         )
       ),
     ]);

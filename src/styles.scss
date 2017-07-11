@@ -19,17 +19,17 @@
         stroke-opacity: 0.2;
       }
 
-      .gradient-links-container {
-        fill: none;
-        stroke-opacity: 0.7;
-      }
-
       .nodes-container {
         font-family: sans-serif;
         font-size: 10px;
 
         rect {
           stroke: #000;
+        }
+
+        text {
+          font-size: 12px;
+          @include stroke2(1px, #fff);
         }
       }
     }
