@@ -26,6 +26,14 @@ const Sankey = Component.extend("sankey", {
         type: "model"
       },
       {
+        name: "markerNodes",
+        type: "model"
+      },
+      {
+        name: "markerLabels",
+        type: "model"
+      },
+      {
         name: "locale",
         type: "locale"
       },
@@ -210,12 +218,11 @@ const Sankey = Component.extend("sankey", {
 
   ready() {
     this._setProfile();
-
+    this._redrawHeader();
+    this._redrawFooter();
+    this._resizeSankey();
     this._updateValues()
       .then(() => {
-        this._redrawHeader();
-        this._redrawFooter();
-        this._resizeSankey();
         this._redraw();
       });
   },
@@ -326,7 +333,8 @@ const Sankey = Component.extend("sankey", {
     links.exit().remove();
 
     const linksEnter = links.enter().append("path")
-      .attr("class", this._css.classes.link);
+      .attr("class", this._css.classes.link)
+      .append("title");
 
     const mergedLinks = this._links = links.merge(linksEnter);
 
@@ -338,7 +346,7 @@ const Sankey = Component.extend("sankey", {
       .attr("stroke", d => colorScale(this.values.color[d.source.name][d.target.name]));
 
     mergedLinks.select("title")
-      .text(d => d.source.name + " → " + d.target.name + "\n" + this._format(d.value));
+      .text(d => this.nodesLabels[d.source.name] + " → " + this.nodesLabels[d.target.name] + "\n" + this._format(d.value));
   },
 
   _redrawGradientLinks() {
@@ -362,11 +370,11 @@ const Sankey = Component.extend("sankey", {
   _createGradientDef(d) {
     const [
       sourceColor,
-      targetColor
+      targetColor,
     ] = [
-      d.source.name,
-      d.target.name
-    ].map(name => this._color(name).replace("#", ""));
+      this.nodesColors[d.source.name],
+      this.nodesColors[d.target.name],
+    ].map(color => color.replace("#", ""));
 
     const id = `c-${sourceColor}-to-${targetColor}`;
     if (!this._defs.select("#" + id).node()) {
@@ -433,7 +441,7 @@ const Sankey = Component.extend("sankey", {
       .attr("y", d => d.y0)
       .attr("height", d => d.y1 - d.y0)
       .attr("width", d => d.x1 - d.x0)
-      .attr("fill", d => this._color(d.name));
+      .attr("fill", d => this.nodesColors[d.name]);
 
     mergedNodes.select("text")
       .transition().duration(300)
@@ -442,13 +450,13 @@ const Sankey = Component.extend("sankey", {
       .attr("dy", "0.35em")
       .attr("text-anchor", "end")
       // .attr("font-size", d => d.value * 2 + 10)
-      .text(d => d.name)
+      .text(d => this.nodesLabels[d.name])
       .filter(d => d.x0 < this._width / 2)
       .attr("x", d => d.x1 + this._settings.labelPadding)
       .attr("text-anchor", "start");
 
     mergedNodes.select("title")
-      .text(d => d.name + "\n" + this._format(d.value));
+      .text(d => this.nodesLabels[d.name] + "\n" + this._format(d.value));
   },
 
   _animateBranch(nodeData) {
@@ -474,11 +482,23 @@ const Sankey = Component.extend("sankey", {
   },
 
   _getValues() {
-    return new Promise(resolve =>
-      this.model.marker.getFrame(this.model.time.value, values =>
-        resolve(this.values = values)
-      )
-    );
+    return Promise.all([
+      new Promise(resolve =>
+        this.model.marker.getFrame(this.model.time.value, values =>
+          resolve(this.values = values)
+        )
+      ),
+      new Promise(resolve =>
+        this.model.markerNodes.getFrame(this.model.time.value, ({ color }) =>
+          resolve(this.nodesColors = color)
+        )
+      ),
+      new Promise(resolve =>
+        this.model.markerLabels.getFrame(this.model.time.value, ({ label }) =>
+          resolve(this.nodesLabels = label)
+        )
+      ),
+    ]);
   },
 
   _buildGraph() {

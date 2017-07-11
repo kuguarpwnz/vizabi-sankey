@@ -11,7 +11,15 @@ export default Vizabi.Tool.extend("Sankey", {
       {
         component,
         placeholder: ".vzb-tool-viz",
-        model: ["state.time", "state.entities", "state.marker", "locale", "ui"]
+        model: [
+          "state.time",
+          "state.entities",
+          "state.marker",
+          "state.marker_nodes",
+          "state.marker_labels",
+          "locale",
+          "ui",
+        ]
       },
       {
         component: Vizabi.Component.get("timeslider"),
