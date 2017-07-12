@@ -120,6 +120,8 @@ const Sankey = Component.extend("sankey", {
         node: "node",
         linksContainer: "links-container",
         link: "link",
+        gradientLinksContainer: "gradient-links-container",
+        gradientLink: "gradient-link",
       },
     };
   },
@@ -205,6 +207,7 @@ const Sankey = Component.extend("sankey", {
       .sort(null);
 
     this._linksContainer = this._svg.select(this._css.dot(this._css.classes.linksContainer));
+    this._gradientLinksContainer = this._svg.select(this._css.dot(this._css.classes.gradientLinksContainer));
     this._nodesContainer = this._svg.select(this._css.dot(this._css.classes.nodesContainer));
   },
 
@@ -315,6 +318,11 @@ const Sankey = Component.extend("sankey", {
   },
 
   _redrawLinks() {
+    this._redrawDefaultLinks();
+    this._redrawGradientLinks();
+  },
+
+  _redrawDefaultLinks() {
     const links = this._linksContainer.selectAll(this._css.dot(this._css.classes.link))
       .data(this._graph.links);
 
@@ -323,25 +331,41 @@ const Sankey = Component.extend("sankey", {
     const linksEnter = links.enter().append("path")
       .attr("class", this._css.classes.link);
 
-    linksEnter
-      .append("title");
+    linksEnter.append("title");
 
     const mergedLinks = this._links = links.merge(linksEnter);
 
     mergedLinks
+      .transition().duration(300)
       .attr("d", sankeyLinkHorizontal())
       .attr("stroke-width", d => Math.max(1, d.width))
-      .each(this._setDash)
-      .style("stroke", d => this._createDef(d));
+      .style("stroke", d => this._createGradientDef(d));
 
     mergedLinks.select("title")
       .text(d =>
         this.entities.label[d.source.name] + " → " + this.entities.label[d.target.name] + "\n" + this._format(d.value)
       );
-
   },
 
-  _createDef(d) {
+  _redrawGradientLinks() {
+    const gradientLinks = this._gradientLinksContainer.selectAll(this._css.dot(this._css.classes.gradientLink))
+      .data(this._graph.links);
+
+    gradientLinks.exit().remove();
+
+    const gradientLinksEnter = gradientLinks.enter().append("path")
+      .attr("class", this._css.classes.gradientLink);
+
+    const mergedGradientLinks = this._gradientLinks = gradientLinks.merge(gradientLinksEnter);
+
+    mergedGradientLinks
+      .attr("d", sankeyLinkHorizontal())
+      .attr("stroke-width", d => Math.max(1, d.width))
+      .each(this._setDash)
+      .style("stroke", d => this._createGradientDef(d));
+  },
+
+  _createGradientDef(d) {
     const [
       sourceColor,
       targetColor,
@@ -354,13 +378,16 @@ const Sankey = Component.extend("sankey", {
     if (!this._defs.select("#" + id).node()) {
       const gradient = this._defs
         .append("linearGradient")
-        .attr("gradientUnits", "userSpaceOnUse")
         .attr("id", id)
         .attr("x1", "0%")
         .attr("y1", "0%")
         .attr("x2", "100%")
         .attr("y2", "0%")
         .attr("spreadMethod", "pad");
+
+      d.source.y0 === d.target.y0
+      && d.source.y1 === d.target.y1
+      && gradient.attr("gradientUnits", "userSpaceOnUse");
 
       gradient.append("stop")
         .attr("offset", "0%")
@@ -381,7 +408,8 @@ const Sankey = Component.extend("sankey", {
     const totalLength = $this.node().getTotalLength();
 
     $this
-      .attr("stroke-dasharray", `${totalLength} ${totalLength}`);
+      .attr("stroke-dasharray", `${totalLength} ${totalLength}`)
+      .attr("stroke-dashoffset", totalLength);
   },
 
   _redrawNodes() {
@@ -398,6 +426,15 @@ const Sankey = Component.extend("sankey", {
     nodesEnter.append("title");
 
     const mergedNodes = this._nodes = nodes.merge(nodesEnter);
+
+    mergedNodes
+      .on("mouseover", d => this._animateBranch(d))
+      .on("mouseout", () => {
+        this._gradientLinks.interrupt();
+        this._gradientLinks
+          .style("opacity", 0)
+          .each(this._setDash);
+      });
 
     mergedNodes.select("rect")
       .transition().duration(300)
@@ -421,6 +458,28 @@ const Sankey = Component.extend("sankey", {
 
     mergedNodes.select("title")
       .text(d => this.entities.label[d.name] + "\n" + this._format(d.value));
+  },
+
+  _animateBranch(nodeData) {
+    const nextLayerNodeData = [];
+    const gradientLinks = this._gradientLinksContainer.selectAll(this._css.dot(this._css.classes.gradientLink))
+      .filter(gradientData => {
+        const result = nodeData.sourceLinks.includes(gradientData);
+        result && nextLayerNodeData.push(gradientData.target);
+        return result;
+      });
+
+    gradientLinks
+      .style("opacity", null)
+      .transition()
+      .duration(300)
+      .ease(d3.easeLinear)
+      .attr("stroke-dashoffset", 0)
+      .on("end", () =>
+        nextLayerNodeData.forEach(d =>
+          this._animateBranch(d)
+        )
+      );
   },
 
   _getValues() {
