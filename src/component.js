@@ -43,9 +43,7 @@ const Sankey = Component.extend("sankey", {
       "change:time.value": () => {
         if (this._readyOnce) {
           this._updateValues()
-            .then(() => {
-              this._redraw();
-            });
+            .then(() => this._redraw());
         }
       }
     };
@@ -203,8 +201,7 @@ const Sankey = Component.extend("sankey", {
   _initSankey() {
     this._sankey = sankey()
       .nodeWidth(this._settings.nodeWidth)
-      .nodePadding(this._settings.nodePadding)
-      .sort(null);
+      .nodePadding(this._settings.nodePadding);
 
     this._linksContainer = this._svg.select(this._css.dot(this._css.classes.linksContainer));
     this._gradientLinksContainer = this._svg.select(this._css.dot(this._css.classes.gradientLinksContainer));
@@ -217,10 +214,9 @@ const Sankey = Component.extend("sankey", {
     this._redrawHeader();
     this._redrawFooter();
     this._resizeSankey();
-    this._updateValues()
-      .then(() => {
-        this._redraw();
-      });
+    this._makeMaxValuesGraph()
+      .then(() => this._updateValues())
+      .then(() => this._redraw());
   },
 
   resize() {
@@ -253,8 +249,42 @@ const Sankey = Component.extend("sankey", {
 
   _redraw() {
     this._sankey(this._graph);
+
+    this._getAnimationDuration();
+    this._adaptToMaxValues();
     this._redrawLinks();
     this._redrawNodes();
+  },
+
+  _adaptToMaxValues() {
+    this._sankey(this._maxValuesGraph = this._buildGraph(this._maxValues));
+
+    const [node] = this._maxValuesGraph.nodes;
+    const graphRatio = node.value / (node.y1 - node.y0);
+
+    this._graph.nodes = this._graph.nodes.map((node, i) => {
+      const { y0 } = this._maxValuesGraph.nodes[i];
+      return Object.assign(node, {
+        y0,
+        y1: y0 + node.value / graphRatio,
+      });
+    });
+
+    this._graph.links = this._graph.links.map((link, i) =>
+      Object.assign(link, {
+        width: link.value / graphRatio,
+      })
+    );
+
+    this._sankey.update(this._graph);
+  },
+
+  _getAnimationDuration() {
+    const { time } = this.model;
+    this._prevTime = this._nextTime || time.value;
+    this._nextTime = time.value;
+
+    return this._duration = time.playing && this._nextTime - this._prevTime > 0 ? time.delayAnimations : 0;
   },
 
   _redrawHeader() {
@@ -336,15 +366,18 @@ const Sankey = Component.extend("sankey", {
     const mergedLinks = this._links = links.merge(linksEnter);
 
     mergedLinks
-      .transition().duration(300)
+      .transition().duration(this._duration)
       .attr("d", sankeyLinkHorizontal())
       .attr("stroke-width", d => Math.max(1, d.width))
       .style("stroke", d => this._createGradientDef(d));
 
     mergedLinks.select("title")
-      .text(d =>
-        this.entities.label[d.source.name] + " → " + this.entities.label[d.target.name] + "\n" + this._format(d.value)
-      );
+      .text(d => {
+        const { value, source, target } = d;
+        const { label } = this._entities;
+
+        return label[source.name] + " → " + label[target.name] + "\n" + this._format(value);
+      });
   },
 
   _redrawGradientLinks() {
@@ -370,8 +403,8 @@ const Sankey = Component.extend("sankey", {
       sourceColor,
       targetColor,
     ] = [
-      this.entities.color[d.source.name],
-      this.entities.color[d.target.name],
+      this._entities.color[d.source.name],
+      this._entities.color[d.target.name],
     ].map(color => color.replace("#", ""));
 
     const id = `c-${sourceColor}-to-${targetColor}`;
@@ -385,9 +418,13 @@ const Sankey = Component.extend("sankey", {
         .attr("y2", "0%")
         .attr("spreadMethod", "pad");
 
-      d.source.y0 === d.target.y0
-      && d.source.y1 === d.target.y1
-      && gradient.attr("gradientUnits", "userSpaceOnUse");
+      const roundTo = 10;
+      const areNodesHorizontallyEqual = (
+        d.source.y0.toFixed(roundTo) === d.target.y0.toFixed(roundTo)
+        && d.source.y1.toFixed(roundTo) === d.target.y1.toFixed(roundTo)
+      );
+
+      areNodesHorizontallyEqual && gradient.attr("gradientUnits", "userSpaceOnUse");
 
       gradient.append("stop")
         .attr("offset", "0%")
@@ -395,7 +432,7 @@ const Sankey = Component.extend("sankey", {
         .attr("stop-opacity", 1);
 
       gradient.append("stop")
-        .attr("offset", "100%")
+        .attr("offset", `${areNodesHorizontallyEqual ? 50 : 100}%`)
         .attr("stop-color", "#" + targetColor)
         .attr("stop-opacity", 1);
     }
@@ -437,27 +474,27 @@ const Sankey = Component.extend("sankey", {
       });
 
     mergedNodes.select("rect")
-      .transition().duration(300)
+      .transition().duration(this._duration)
       .attr("x", d => d.x0)
       .attr("y", d => d.y0)
       .attr("height", d => d.y1 - d.y0)
       .attr("width", d => d.x1 - d.x0)
-      .attr("fill", d => this.entities.color[d.name]);
+      .attr("fill", d => this._entities.color[d.name]);
 
     mergedNodes.select("text")
-      .transition().duration(300)
+      .transition().duration(this._duration)
       .attr("x", d => d.x0 - this._settings.labelPadding)
       .attr("y", d => (d.y1 + d.y0) / 2)
       .attr("dy", "0.35em")
       .attr("text-anchor", "end")
       // .attr("font-size", d => d.value * 2 + 10)
-      .text(d => this.entities.label[d.name])
+      .text(d => this._entities.label[d.name])
       .filter(d => d.x0 < this._width / 2)
       .attr("x", d => d.x1 + this._settings.labelPadding)
       .attr("text-anchor", "start");
 
     mergedNodes.select("title")
-      .text(d => this.entities.label[d.name] + "\n" + this._format(d.value));
+      .text(d => this._entities.label[d.name] + "\n" + this._format(d.value));
   },
 
   _animateBranch(nodeData) {
@@ -482,26 +519,65 @@ const Sankey = Component.extend("sankey", {
       );
   },
 
+  _makeMaxValuesGraph() {
+    return this._getAllValues()
+      .then(() => this._getMaxValues());
+  },
+
+  _getMaxValues() {
+    return this._maxValues = Object.keys(this._allValues)
+      .reduce((result, time, index) => {
+        const currentYearValues = this._allValues[time].size;
+
+        Object.keys(currentYearValues)
+          .forEach(sourceKey => {
+            const source = currentYearValues[sourceKey];
+            !index && (result[sourceKey] = {});
+            const resultSource = result[sourceKey];
+
+            Object.keys(source)
+              .forEach(targetKey => {
+                const value = source[targetKey];
+                (!index || resultSource[targetKey] < value) && (resultSource[targetKey] = value);
+              });
+          });
+
+        return result;
+      }, {});
+  },
+
+  _getAllValues() {
+    return new Promise(resolve =>
+      this.model.marker.getFrame(null, _allValues =>
+        resolve(Object.assign(this, { _allValues }))
+      )
+    );
+  },
+
   _getValues() {
     return Promise.all([
       new Promise(resolve =>
-        this.model.marker.getFrame(this.model.time.value, values =>
-          resolve(this.values = values)
-        )
-      ),
-      new Promise(resolve =>
         this.model.markerEntities.getFrame(this.model.time.value, ({ color, label }) =>
-          resolve(Object.assign(this, { entities: { color, label } }))
+          resolve(Object.assign(this, { _entities: { color, label } }))
         )
       ),
+      new Promise(resolve => {
+        const _values = this._allValues[this.model.time.value];
+
+        _values ?
+          resolve(Object.assign(this, { _values })) :
+          this.model.marker.getFrame(this.model.time.value, _values =>
+            resolve(Object.assign(this, { _values }))
+          );
+      })
     ]);
   },
 
-  _buildGraph() {
+  _buildGraph(values) {
     const graph = { nodes: [], links: [] };
 
-    Object.keys(this.values.size).forEach(source => {
-      const nested = this.values.size[source];
+    Object.keys(values).forEach(source => {
+      const nested = values[source];
 
       graph.nodes.push({ name: source });
 
@@ -527,12 +603,12 @@ const Sankey = Component.extend("sankey", {
 
     graph.nodes = graph.nodes.map(name => ({ name }));
 
-    return this._graph = graph;
+    return graph;
   },
 
   _updateValues() {
     return this._getValues()
-      .then(() => this._buildGraph());
+      .then(() => this._graph = this._buildGraph(this._values.size));
   },
 
 });
