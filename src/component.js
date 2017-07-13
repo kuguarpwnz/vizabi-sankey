@@ -263,10 +263,13 @@ const Sankey = Component.extend("sankey", {
     const graphRatio = node.value / (node.y1 - node.y0);
 
     this._graph.nodes = this._graph.nodes.map((node, i) => {
-      const { y0 } = this._maxValuesGraph.nodes[i];
+      const { y0, y1 } = this._maxValuesGraph.nodes[i];
+      const maxValueNodeCenter = y0 + (y1 - y0) / 2;
+      const halfNodeHeight = node.value / graphRatio / 2;
+
       return Object.assign(node, {
-        y0,
-        y1: y0 + node.value / graphRatio,
+        y0: maxValueNodeCenter - halfNodeHeight,
+        y1: maxValueNodeCenter + halfNodeHeight,
       });
     });
 
