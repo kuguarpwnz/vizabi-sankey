@@ -67,9 +67,6 @@ const Sankey = Component.extend("sankey", {
     const formatNumber = d3.format(",.0f");
     this._format = d => `${formatNumber(d)} TWh`;
 
-    const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
-    this._color = value => colorScale(value.replace(/ .*/, ""));
-
     this._translator = this.model.locale.getTFunction();
 
     this._calculateSize();
@@ -139,10 +136,9 @@ const Sankey = Component.extend("sankey", {
   _initHeaderText() {
     this._headerText = this._header.select(this._css.dot(this._css.classes.headerText))
       .on("click", () =>
-        // TODO: fix
         this.parent
           .findChildByName("gapminder-treemenu")
-          .markerID("axis_x")
+          .markerID("axis")
           .alignX("left")
           .alignY("top")
           .updateView()
@@ -155,13 +151,12 @@ const Sankey = Component.extend("sankey", {
 
     this._info = this._header.select(this._css.dot(this._css.classes.info))
       .on("mouseover", function() {
-        // TODO: check + fix
         const rect = this.getBBox();
         const ctx = utils.makeAbsoluteContext(this, this.farthestViewportElement);
         const coord = ctx(rect.x - 10, rect.y + rect.height + 10);
 
         _this.parent.findChildByName("gapminder-datanotes")
-          .setHook("axis_x")
+          .setHook("axis")
           .show()
           .setPos(coord.x, coord.y);
       })
@@ -291,9 +286,8 @@ const Sankey = Component.extend("sankey", {
   },
 
   _redrawHeader() {
-    // TODO: change text to .getConceptProps().name
     this._headerText
-      .text("HEADER TEXT");
+      .text(this.model.marker.axis.getConceptprops().name);
 
     const headerTextBBox = this._headerText.node().getBBox();
 
