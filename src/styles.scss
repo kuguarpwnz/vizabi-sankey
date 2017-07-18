@@ -34,7 +34,7 @@
 
         text {
           font-size: 12px;
-          @include stroke2(1px, #fff);
+          @include stroke(2px);
         }
       }
     }
