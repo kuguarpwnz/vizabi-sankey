@@ -442,7 +442,7 @@ const Sankey = Component.extend("sankey", {
     const totalLength = $this.node().getTotalLength();
 
     $this
-      .attr("stroke-dasharray", `${totalLength} ${totalLength}`)
+      .attr("stroke-dasharray", `${totalLength}`)
       .attr("stroke-dashoffset", totalLength);
   },
 
@@ -495,25 +495,49 @@ const Sankey = Component.extend("sankey", {
   },
 
   _animateBranch(nodeData) {
+    const gradientLinks = this._gradientLinksContainer.selectAll(this._css.dot(this._css.classes.gradientLink));
+
+    this._animatePrevLayer(gradientLinks, nodeData);
+    this._animateNextLayer(gradientLinks, nodeData);
+  },
+
+  _animatePrevLayer(gradientLinks, nodeData) {
+    const prevLayerNodeData = [];
+    const filteredLinks = gradientLinks
+      .filter(gradientData => {
+        const result = nodeData.targetLinks.includes(gradientData);
+        result && prevLayerNodeData.push(gradientData.source);
+        return result;
+      });
+
+    filteredLinks
+      .attr("stroke-dashoffset", function() {
+        return -Math.abs(d3.select(this).attr("stroke-dashoffset"));
+      })
+      .style("opacity", null)
+      .transition()
+      .duration(300)
+      .ease(d3.easeLinear)
+      .attr("stroke-dashoffset", 0)
+      .on("end", () => prevLayerNodeData.forEach(d => this._animatePrevLayer(gradientLinks, d)));
+  },
+
+  _animateNextLayer(gradientLinks, nodeData) {
     const nextLayerNodeData = [];
-    const gradientLinks = this._gradientLinksContainer.selectAll(this._css.dot(this._css.classes.gradientLink))
+    const filteredLinks = gradientLinks
       .filter(gradientData => {
         const result = nodeData.sourceLinks.includes(gradientData);
         result && nextLayerNodeData.push(gradientData.target);
         return result;
       });
 
-    gradientLinks
+    filteredLinks
       .style("opacity", null)
       .transition()
       .duration(300)
       .ease(d3.easeLinear)
       .attr("stroke-dashoffset", 0)
-      .on("end", () =>
-        nextLayerNodeData.forEach(d =>
-          this._animateBranch(d)
-        )
-      );
+      .on("end", () => nextLayerNodeData.forEach(d => this._animateNextLayer(gradientLinks, d)));
   },
 
   _makeMaxValuesGraph() {
