@@ -22,6 +22,10 @@ const Sankey = Component.extend("sankey", {
         type: "entities"
       },
       {
+        name: "entitiesAll",
+        type: "entities"
+      },
+      {
         name: "marker",
         type: "model"
       },
@@ -40,12 +44,12 @@ const Sankey = Component.extend("sankey", {
     ];
 
     this.model_binds = {
-      "change:time.value": () => {
-        if (this._readyOnce) {
-          this._updateValues()
-            .then(() => this._redraw());
-        }
-      }
+      "change:time.value": () =>
+        this._updateValues()
+          .then(() => this._redraw()),
+
+      "change:markerEntities.select": () =>
+        this._highlightEntities(),
     };
 
     this._super(config, context);
@@ -78,6 +82,7 @@ const Sankey = Component.extend("sankey", {
       nodePadding: 15,
       labelPadding: 5,
       iconMargin: 5,
+      gradientTransitionDuration: 300,
     };
 
     this._profiles = {
@@ -211,7 +216,8 @@ const Sankey = Component.extend("sankey", {
     this._resizeSankey();
     this._makeMaxValuesGraph()
       .then(() => this._updateValues())
-      .then(() => this._redraw());
+      .then(() => this._redraw())
+      .then(() => this._highlightEntities());
   },
 
   resize() {
@@ -462,13 +468,17 @@ const Sankey = Component.extend("sankey", {
     const mergedNodes = this._nodes = nodes.merge(nodesEnter);
 
     mergedNodes
-      .on("mouseover", d => this._animateBranch(d))
+      .on("mouseover", d => this._highlightBranches(d, true))
       .on("mouseout", () => {
-        this._gradientLinks.interrupt();
-        this._gradientLinks
-          .style("opacity", 0)
-          .each(this._setDash);
-      });
+          this._gradientLinks
+            .interrupt()
+            .style("opacity", 0)
+            .each(this._setDash);
+
+          this._highlightEntities();
+        }
+      )
+      .on("click", d => this.model.markerEntities.selectMarker(d));
 
     mergedNodes.select("rect")
       .transition().duration(this._duration)
@@ -494,14 +504,14 @@ const Sankey = Component.extend("sankey", {
       .text(d => this._entities.label[d.name] + "\n" + this._format(d.value));
   },
 
-  _animateBranch(nodeData) {
+  _highlightBranches(nodeData, animate = false) {
     const gradientLinks = this._gradientLinksContainer.selectAll(this._css.dot(this._css.classes.gradientLink));
 
-    this._animatePrevLayer(gradientLinks, nodeData);
-    this._animateNextLayer(gradientLinks, nodeData);
+    this._highlightPrevLayer(gradientLinks, nodeData, animate);
+    this._highlightNextLayer(gradientLinks, nodeData, animate);
   },
 
-  _animatePrevLayer(gradientLinks, nodeData) {
+  _highlightPrevLayer(gradientLinks, nodeData, isAnimation) {
     const prevLayerNodeData = [];
     const filteredLinks = gradientLinks
       .filter(gradientData => {
@@ -510,19 +520,30 @@ const Sankey = Component.extend("sankey", {
         return result;
       });
 
-    filteredLinks
+    const change = elem => elem.attr("stroke-dashoffset", 0);
+    const animateNextLayer = () =>
+      prevLayerNodeData.forEach(d => this._highlightPrevLayer(gradientLinks, d, isAnimation));
+
+    const animatable = filteredLinks
       .attr("stroke-dashoffset", function() {
         return -Math.abs(d3.select(this).attr("stroke-dashoffset"));
       })
-      .style("opacity", null)
-      .transition()
-      .duration(300)
-      .ease(d3.easeLinear)
-      .attr("stroke-dashoffset", 0)
-      .on("end", () => prevLayerNodeData.forEach(d => this._animatePrevLayer(gradientLinks, d)));
+      .style("opacity", null);
+
+    if (isAnimation) {
+      change(
+        animatable
+          .transition()
+          .duration(this._settings.gradientTransitionDuration)
+          .ease(d3.easeLinear)
+      ).on("end", animateNextLayer);
+    } else {
+      change(animatable);
+      animateNextLayer();
+    }
   },
 
-  _animateNextLayer(gradientLinks, nodeData) {
+  _highlightNextLayer(gradientLinks, nodeData, isAnimation) {
     const nextLayerNodeData = [];
     const filteredLinks = gradientLinks
       .filter(gradientData => {
@@ -531,13 +552,37 @@ const Sankey = Component.extend("sankey", {
         return result;
       });
 
-    filteredLinks
-      .style("opacity", null)
-      .transition()
-      .duration(300)
-      .ease(d3.easeLinear)
-      .attr("stroke-dashoffset", 0)
-      .on("end", () => nextLayerNodeData.forEach(d => this._animateNextLayer(gradientLinks, d)));
+    const change = elem => elem.attr("stroke-dashoffset", 0);
+    const animateNextLayer = () =>
+      nextLayerNodeData.forEach(d => this._highlightNextLayer(gradientLinks, d, isAnimation));
+
+    const animatable = filteredLinks
+      .style("opacity", null);
+
+
+    if (isAnimation) {
+      change(
+        animatable
+          .transition()
+          .duration(this._settings.gradientTransitionDuration)
+          .ease(d3.easeLinear)
+      ).on("end", animateNextLayer);
+    } else {
+      change(animatable);
+      animateNextLayer();
+    }
+  },
+
+  _highlightEntities() {
+    const { markerEntities } = this.model;
+    markerEntities.getSelected().length && this._gradientLinks.interrupt();
+
+    this._nodes
+      .classed("vzb-selected", d => {
+        const isSelected = markerEntities.isSelected(d);
+        isSelected && this._highlightBranches(d);
+        return isSelected;
+      })
   },
 
   _makeMaxValuesGraph() {
@@ -622,7 +667,8 @@ const Sankey = Component.extend("sankey", {
       d.target = graph.nodes.indexOf(d.target);
     });
 
-    graph.nodes = graph.nodes.map(name => ({ name }));
+    const dim = this.model.entitiesAll.getDimension();
+    graph.nodes = graph.nodes.map(name => ({ [dim]: name, name }));
 
     return graph;
   },
