@@ -395,8 +395,9 @@ const Sankey = Component.extend("sankey", {
     const mergedGradientLinks = this._gradientLinks = gradientLinks.merge(gradientLinksEnter);
 
     mergedGradientLinks
-      .style("opacity", 0)
-      .transition().duration(this._duration)
+      .style("opacity", 0);
+
+    (this._duration ? mergedGradientLinks.transition().duration(this._duration) : mergedGradientLinks)
       .attr("d", sankeyLinkHorizontal())
       .attr("stroke-width", d => Math.max(1, d.width))
       .each(this._setDash)
