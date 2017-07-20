@@ -505,60 +505,57 @@ const Sankey = Component.extend("sankey", {
       .text(d => this._entities.label[d.name] + "\n" + this._format(d.value));
   },
 
-  _highlightBranches(nodeData, animate = false) {
-    this._highlightPrevLayer(nodeData, animate);
-    this._highlightNextLayer(nodeData, animate);
+  _processLayers(nodeData, nodeKey, linkKey) {
+    const anotherLayerNodeData = [];
+
+    const links = this._gradientLinks
+      .filter(linkData => {
+        const result = nodeData[nodeKey].includes(linkData);
+        result && anotherLayerNodeData.push(linkData[linkKey]);
+        return result;
+      });
+
+    return {
+      links,
+      anotherLayerNodeData,
+    };
+  },
+
+  _highlightBranches(nodeData, isAnimation = false) {
+    this._highlightPrevLayer(nodeData, isAnimation);
+    this._highlightNextLayer(nodeData, isAnimation);
   },
 
   _highlightPrevLayer(nodeData, isAnimation) {
-    const prevLayerNodeData = [];
-    const filteredLinks = this._gradientLinks
-      .filter(gradientData => {
-        const result = nodeData.targetLinks.includes(gradientData);
-        result && prevLayerNodeData.push(gradientData.source);
-        return result;
-      });
-
-    const change = elem =>
-      isAnimation ?
-        elem
-          .attr("stroke-dashoffset", 0) :
-        elem
-          .attr("stroke-dashoffset", null)
-          .attr("stroke-dasharray", null);
-
-    const animateNextLayer = () =>
-      prevLayerNodeData.forEach(d => this._highlightPrevLayer(d, isAnimation));
-
-    const animatable = filteredLinks
-      .attr("stroke-dashoffset", function() {
+    this._highlightLayer(
+      nodeData,
+      isAnimation,
+      "targetLinks",
+      "source",
+      links => links.attr("stroke-dashoffset", function() {
         return -Math.abs(d3.select(this).attr("stroke-dashoffset"));
       })
-      .style("opacity", null);
-
-    if (isAnimation) {
-      change(
-        animatable
-          .transition()
-          .duration(this._settings.gradientTransitionDuration)
-          .ease(d3.easeLinear)
-      ).on("end", animateNextLayer);
-    } else {
-      change(animatable);
-      animateNextLayer();
-    }
+    );
   },
 
   _highlightNextLayer(nodeData, isAnimation) {
-    const nextLayerNodeData = [];
-    const filteredLinks = this._gradientLinks
-      .filter(gradientData => {
-        const result = nodeData.sourceLinks.includes(gradientData);
-        result && nextLayerNodeData.push(gradientData.target);
-        return result;
-      });
+    this._highlightLayer(nodeData, isAnimation, "sourceLinks", "target");
+  },
 
-    const change = elem =>
+  _highlightLayer(nodeData, ...rest) {
+    const [
+      isAnimation,
+      nodeKey,
+      linkKey,
+      transformAnimatable = links => links
+    ] = rest;
+
+    const {
+      links,
+      anotherLayerNodeData,
+    } = this._processLayers(nodeData, nodeKey, linkKey);
+
+    const highlight = elem =>
       isAnimation ?
         elem
           .attr("stroke-dashoffset", 0) :
@@ -566,22 +563,19 @@ const Sankey = Component.extend("sankey", {
           .attr("stroke-dashoffset", null)
           .attr("stroke-dasharray", null);
 
-    const animateNextLayer = () =>
-      nextLayerNodeData.forEach(d => this._highlightNextLayer(d, isAnimation));
+    const animateNextLayer = () => anotherLayerNodeData.forEach(d => this._highlightLayer(d, ...rest));
 
-    const animatable = filteredLinks
-      .style("opacity", null);
-
+    const animatable = transformAnimatable(links.style("opacity", null));
 
     if (isAnimation) {
-      change(
+      highlight(
         animatable
           .transition()
           .duration(this._settings.gradientTransitionDuration)
           .ease(d3.easeLinear)
       ).on("end", animateNextLayer);
     } else {
-      change(animatable);
+      highlight(animatable);
       animateNextLayer();
     }
   },
