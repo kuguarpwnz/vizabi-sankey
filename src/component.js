@@ -567,11 +567,11 @@ const Sankey = Component.extend("sankey", {
   },
 
   _highlightLayer(links, isAnimation) {
-    const highlight = elem =>
+    const highlight = links =>
       isAnimation ?
-        elem
+        links
           .attr("stroke-dashoffset", 0) :
-        elem
+        links
           .attr("stroke-dashoffset", null)
           .attr("stroke-dasharray", null);
 
