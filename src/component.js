@@ -593,12 +593,18 @@ const Sankey = Component.extend("sankey", {
   },
 
   _highlightEntities() {
-    this._nodes
-      .classed("vzb-selected", d => {
-        const isSelected = this.model.markerEntities.isSelected(d);
-        isSelected && this._highlightBranches(d);
+    const { markerEntities } = this.model;
+    const areSomeSelected = markerEntities.getSelected().length;
 
-        return isSelected;
+    const _this = this;
+    this._nodes
+      .each(function(d) {
+        const isSelected = markerEntities.isSelected(d);
+
+        d3.select(this)
+          .classed("darkened", areSomeSelected && !isSelected);
+
+        isSelected && _this._highlightBranches(d);
       });
   },
 
