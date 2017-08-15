@@ -60,6 +60,7 @@ const Sankey = Component.extend("sankey", {
 
   readyOnce() {
     this._initSettings();
+    this._setProfile();
     this._initBasics();
     this._initHeader();
     this._initFooter();
@@ -82,7 +83,6 @@ const Sankey = Component.extend("sankey", {
   _initSettings() {
     this._settings = {
       nodeWidth: 15,
-      nodePadding: 15,
       labelPadding: 5,
       iconMargin: 5,
       gradientTransitionDuration: 300,
@@ -91,14 +91,17 @@ const Sankey = Component.extend("sankey", {
     this._profiles = {
       small: {
         iconSize: 16,
+        nodePadding: 3,
         margin: { top: 10, left: 10, bottom: 10, right: 10 },
       },
       medium: {
         iconSize: 16,
+        nodePadding: 6,
         margin: { top: 10, left: 10, bottom: 10, right: 10 },
       },
       large: {
         iconSize: 16,
+        nodePadding: 10,
         margin: { top: 10, left: 10, bottom: 10, right: 10 },
       },
     };
@@ -204,7 +207,7 @@ const Sankey = Component.extend("sankey", {
   _initSankey() {
     this._sankey = sankey()
       .nodeWidth(this._settings.nodeWidth)
-      .nodePadding(this._settings.nodePadding);
+      .nodePadding(this._activeProfile.nodePadding);
 
     this._linksContainer = this._svg.select(this._css.dot(this._css.classes.linksContainer));
     this._gradientLinksContainer = this._svg.select(this._css.dot(this._css.classes.gradientLinksContainer));
@@ -255,6 +258,9 @@ const Sankey = Component.extend("sankey", {
   },
 
   _redraw() {
+    this._sankey
+      .nodePadding(this._activeProfile.nodePadding);
+
     this._sankey(this._graph);
 
     this._getAnimationDuration();
@@ -534,8 +540,10 @@ const Sankey = Component.extend("sankey", {
   },
 
   _updateLabelOpacity(d, view) {
+    const nodeHeightWithPadding = this._getNodeHeight(d) + this._activeProfile.nodePadding;
+
     view
-      .style("opacity", Number(this._getNodeHeight(d) >= view.node().getBBox().height));
+      .style("opacity", Number(nodeHeightWithPadding >= view.node().getBBox().height));
   },
 
   _getLayer(filter) {
