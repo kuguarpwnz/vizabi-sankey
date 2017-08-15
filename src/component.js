@@ -44,6 +44,9 @@ const Sankey = Component.extend("sankey", {
     ];
 
     this.model_binds = {
+      "change:time.playing": () =>
+        this._updateAllLabelsOpacity(),
+
       "change:time.value": () =>
         this._updateValues()
           .then(() => this._redraw()),
@@ -216,7 +219,10 @@ const Sankey = Component.extend("sankey", {
     this._resizeSankey();
     this._makeMaxValuesGraph()
       .then(() => this._updateValues())
-      .then(() => this._redraw());
+      .then(() => {
+        this._redraw();
+        this._updateAllLabelsOpacity();
+      });
   },
 
   resize() {
@@ -226,6 +232,7 @@ const Sankey = Component.extend("sankey", {
     this._redrawFooter();
     this._resizeSankey();
     this._redraw();
+    this._updateAllLabelsOpacity();
   },
 
   _setProfile() {
@@ -260,12 +267,12 @@ const Sankey = Component.extend("sankey", {
   _adaptToMaxValues() {
     this._sankey(this._maxValuesGraph = this._buildGraph(this._maxValues));
 
-    const [node] = this._maxValuesGraph.nodes;
-    const graphRatio = node.value / (node.y1 - node.y0);
+    const [nodeData] = this._maxValuesGraph.nodes;
+    const graphRatio = nodeData.value / this._getNodeHeight(nodeData);
 
     this._graph.nodes = this._graph.nodes.map((node, i) => {
-      const { y0, y1 } = this._maxValuesGraph.nodes[i];
-      const maxValueNodeCenter = y0 + (y1 - y0) / 2;
+      const nodeData = this._maxValuesGraph.nodes[i];
+      const maxValueNodeCenter = nodeData.y0 + this._getNodeHeight(nodeData) / 2;
       const halfNodeHeight = node.value / graphRatio / 2;
 
       return Object.assign(node, {
@@ -456,6 +463,8 @@ const Sankey = Component.extend("sankey", {
   },
 
   _redrawNodes() {
+    const _this = this;
+
     const nodes = this._nodesContainer.selectAll(this._css.dot(this._css.classes.node))
       .data(this._graph.nodes);
 
@@ -471,14 +480,20 @@ const Sankey = Component.extend("sankey", {
     const mergedNodes = this._nodes = nodes.merge(nodesEnter);
 
     mergedNodes
-      .on("mouseover", d => this._highlightBranches(d, true))
-      .on("mouseout", () => {
-        this._gradientLinks
+      .on("mouseover", function(d) {
+        _this._highlightBranches(d, true);
+
+        d3.select(this).select("text").style("opacity", 1);
+      })
+      .on("mouseout", function(d) {
+        _this._gradientLinks
           .interrupt()
           .style("opacity", 0)
-          .each(this._setDash);
+          .each(_this._setDash);
 
-        this._highlightEntities();
+        _this._highlightEntities();
+
+        _this._updateLabelOpacity(d, d3.select(this).select("text"));
       })
       .on("click", d => this.model.markerEntities.selectMarker(d));
 
@@ -486,7 +501,7 @@ const Sankey = Component.extend("sankey", {
       .transition().duration(this._duration)
       .attr("x", d => d.x0)
       .attr("y", d => d.y0)
-      .attr("height", d => d.y1 - d.y0)
+      .attr("height", this._getNodeHeight)
       .attr("width", d => d.x1 - d.x0)
       .attr("fill", d => this._entities.color[d.name]);
 
@@ -496,7 +511,6 @@ const Sankey = Component.extend("sankey", {
       .attr("y", d => (d.y1 + d.y0) / 2)
       .attr("dy", "0.35em")
       .attr("text-anchor", "end")
-      // .attr("font-size", d => d.value * 2 + 10)
       .text(d => this._entities.label[d.name])
       .filter(d => d.x0 < this._width / 2)
       .attr("x", d => d.x1 + this._settings.labelPadding)
@@ -504,6 +518,24 @@ const Sankey = Component.extend("sankey", {
 
     mergedNodes.select("title")
       .text(d => this._entities.label[d.name] + "\n" + this._format(d.value));
+  },
+
+  _getNodeHeight(d) {
+    return d.y1 - d.y0;
+  },
+
+  _updateAllLabelsOpacity() {
+    const _this = this;
+
+    this._nodes.select("text")
+      .each(function(d) {
+        _this._updateLabelOpacity(d, d3.select(this));
+      });
+  },
+
+  _updateLabelOpacity(d, view) {
+    view
+      .style("opacity", Number(this._getNodeHeight(d) >= view.node().getBBox().height));
   },
 
   _getLayer(filter) {
