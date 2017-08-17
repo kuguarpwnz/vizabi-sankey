@@ -15,6 +15,6 @@
     "vizabi-tool-bundler": "github:vizabi/vizabi-tool-bundler"
   },
   "dependencies": {
-    "d3-sankey": "^0.7.1"
+    "d3-sankey": "git+https://github.com/vizabi/d3-sankey.git"
   }
 }
