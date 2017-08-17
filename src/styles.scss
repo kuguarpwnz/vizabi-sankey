@@ -40,6 +40,17 @@
           text {
             font-size: 12px;
           }
+
+          .default-text {
+            @include stroke(3px);
+          }
+
+          .stroke-text {
+            fill: $vzb-color-stroke;
+            stroke: $vzb-color-stroke;
+            stroke-width: 3px;
+            opacity: $vzb-stroke-opacity;
+          }
         }
       }
     }

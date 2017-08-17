@@ -124,6 +124,8 @@ const Sankey = Component.extend("sankey", {
         warning: "vzb-data-warning-icon",
         nodesContainer: "nodes-container",
         node: "node",
+        defaultText: "default-text",
+        strokeText: "stroke-text",
         linksContainer: "links-container",
         link: "link",
         gradientLinksContainer: "gradient-links-container",
@@ -480,7 +482,8 @@ const Sankey = Component.extend("sankey", {
       .attr("class", this._css.classes.node);
 
     nodesEnter.append("rect");
-    nodesEnter.append("text");
+    nodesEnter.append("text").classed(this._css.classes.strokeText, true);
+    nodesEnter.append("text").classed(this._css.classes.defaultText, true);
     nodesEnter.append("title");
 
     const mergedNodes = this._nodes = nodes.merge(nodesEnter);
@@ -489,7 +492,7 @@ const Sankey = Component.extend("sankey", {
       .on("mouseover", function(d) {
         _this._highlightBranches(d, true);
 
-        d3.select(this).select("text").style("opacity", 1);
+        d3.select(this).select("text").style("visibility", "visible");
       })
       .on("mouseout", function(d) {
         _this._gradientLinks
@@ -511,16 +514,35 @@ const Sankey = Component.extend("sankey", {
       .attr("width", d => d.x1 - d.x0)
       .attr("fill", d => this._entities.color[d.name]);
 
-    mergedNodes.select("text")
-      .transition().duration(this._duration)
-      .attr("x", d => d.x0 - this._settings.labelPadding)
-      .attr("y", d => (d.y1 + d.y0) / 2)
-      .attr("dy", "0.35em")
-      .attr("text-anchor", "end")
-      .text(d => this._entities.label[d.name])
-      .filter(d => d.x0 < this._width / 2)
-      .attr("x", d => d.x1 + this._settings.labelPadding)
-      .attr("text-anchor", "start");
+    let isPaintOrderAvailable = true;
+    const textCallback = function(d) {
+      const view = d3.select(this);
+      isPaintOrderAvailable = view.style("paint-order").length > 0;
+
+      const isRtlText = d.x0 < _this._width / 2;
+      const x = isRtlText ?
+        d.x1 + _this._settings.labelPadding :
+        d.x0 - _this._settings.labelPadding;
+      const textAnchor = isRtlText ? "start" : "end";
+
+      view
+        .transition().duration(_this._duration)
+        .attr("x", x)
+        .attr("y", (d.y1 + d.y0) / 2)
+        .attr("dy", "0.35em")
+        .attr("text-anchor", textAnchor)
+        .text(_this._entities.label[d.name]);
+
+      return view;
+    };
+
+    mergedNodes.select(".default-text")
+      .each(textCallback);
+
+    const strokeTextSelection = mergedNodes.select(this._css.dot(this._css.classes.strokeText));
+    isPaintOrderAvailable ?
+      strokeTextSelection.remove() :
+      strokeTextSelection.each(textCallback);
 
     mergedNodes.select("title")
       .text(d => this._entities.label[d.name] + "\n" + this._format(d.value));
@@ -541,9 +563,10 @@ const Sankey = Component.extend("sankey", {
 
   _updateLabelOpacity(d, view) {
     const nodeHeightWithPadding = this._getNodeHeight(d) + this._activeProfile.nodePadding;
+    const visibility = nodeHeightWithPadding >= view.node().getBBox().height ? null : "hidden";
 
     view
-      .style("opacity", Number(nodeHeightWithPadding >= view.node().getBBox().height));
+      .style("visibility", visibility);
   },
 
   _getLayer(filter) {
