@@ -152,7 +152,7 @@ const Sankey = Component.extend("sankey", {
       .on("click", () =>
         this.parent
           .findChildByName("gapminder-treemenu")
-          .markerID("axis")
+          .markerID("size")
           .alignX("left")
           .alignY("top")
           .updateView()
@@ -170,7 +170,7 @@ const Sankey = Component.extend("sankey", {
         const coord = ctx(rect.x - 10, rect.y + rect.height + 10);
 
         _this.parent.findChildByName("gapminder-datanotes")
-          .setHook("axis")
+          .setHook("size")
           .show()
           .setPos(coord.x, coord.y);
       })
@@ -309,7 +309,7 @@ const Sankey = Component.extend("sankey", {
 
   _redrawHeader() {
     this._headerText
-      .text(this.model.marker.axis.getConceptprops().name);
+      .text(this.model.marker.size.getConceptprops().name);
 
     const headerTextBBox = this._headerText.node().getBBox();
 
