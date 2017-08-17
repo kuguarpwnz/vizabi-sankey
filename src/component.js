@@ -126,6 +126,7 @@ const Sankey = Component.extend("sankey", {
         node: "node",
         defaultText: "default-text",
         strokeText: "stroke-text",
+        stroke: "stroke",
         linksContainer: "links-container",
         link: "link",
         gradientLinksContainer: "gradient-links-container",
@@ -482,9 +483,12 @@ const Sankey = Component.extend("sankey", {
       .attr("class", this._css.classes.node);
 
     nodesEnter.append("rect");
-    nodesEnter.append("text").classed(this._css.classes.strokeText, true);
-    nodesEnter.append("text").classed(this._css.classes.defaultText, true);
     nodesEnter.append("title");
+    nodesEnter.append("text")
+      .classed(this._css.classes.strokeText, true);
+    nodesEnter.append("text")
+      .classed(this._css.classes.defaultText, true)
+      .classed(this._css.classes.stroke, true);
 
     const mergedNodes = this._nodes = nodes.merge(nodesEnter);
 
@@ -536,13 +540,19 @@ const Sankey = Component.extend("sankey", {
       return view;
     };
 
-    mergedNodes.select(".default-text")
+    mergedNodes.select(this._css.dot(this._css.classes.defaultText))
       .each(textCallback);
 
     const strokeTextSelection = mergedNodes.select(this._css.dot(this._css.classes.strokeText));
-    isPaintOrderAvailable ?
-      strokeTextSelection.remove() :
+    if (isPaintOrderAvailable) {
+      strokeTextSelection.remove();
+    } else {
       strokeTextSelection.each(textCallback);
+
+      mergedNodes.select(this._css.dot(this._css.classes.defaultText))
+        .classed("stroke", false);
+    }
+
 
     mergedNodes.select("title")
       .text(d => this._entities.label[d.name] + "\n" + this._format(d.value));
