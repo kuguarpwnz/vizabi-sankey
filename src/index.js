@@ -13,10 +13,10 @@ export default Vizabi.Tool.extend("Sankey", {
         placeholder: ".vzb-tool-viz",
         model: [
           "state.time",
+          "state.entities_from",
           "state.entities",
-          "state.entities_all",
+          "state.marker_links",
           "state.marker",
-          "state.marker_entities",
           "locale",
           "ui",
         ]
@@ -24,7 +24,7 @@ export default Vizabi.Tool.extend("Sankey", {
       {
         component: Vizabi.Component.get("timeslider"),
         placeholder: ".vzb-tool-timeslider",
-        model: ["state.time", "state.entities", "state.marker", "ui"]
+        model: ["state.time", "state.entities_from", "state.marker_links", "ui"]
       },
       {
         component: Vizabi.Component.get("dialogs"),
@@ -39,12 +39,12 @@ export default Vizabi.Tool.extend("Sankey", {
       {
         component: Vizabi.Component.get("treemenu"),
         placeholder: ".vzb-tool-treemenu",
-        model: ["state.marker", "state.marker_tags", "state.time", "locale"]
+        model: ["state.marker_links", "state.marker_tags", "state.time", "locale"]
       },
       {
         component: Vizabi.Component.get("datanotes"),
         placeholder: ".vzb-tool-datanotes",
-        model: ["state.marker", "locale"]
+        model: ["state.marker_links", "locale"]
       },
       {
         component: Vizabi.Component.get("datawarning"),
