@@ -456,7 +456,7 @@ const Sankey = Component.extend("sankey", {
       const roundTo = 10;
       const areNodesHorizontallyEqual = (
         d.source.y0.toFixed(roundTo) === d.target.y0.toFixed(roundTo)
-        && d.source.y1.toFixed(roundTo) === d.target.y1.toFixed(roundTo)
+        || d.source.y1.toFixed(roundTo) === d.target.y1.toFixed(roundTo)
       );
 
       areNodesHorizontallyEqual && gradient.attr("gradientUnits", "userSpaceOnUse");
