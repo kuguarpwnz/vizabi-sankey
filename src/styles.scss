@@ -37,10 +37,6 @@
             stroke: #000;
           }
 
-          text {
-            font-size: 12px;
-          }
-
           .stroke {
             @include stroke(3px);
           }

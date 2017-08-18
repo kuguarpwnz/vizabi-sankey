@@ -90,7 +90,6 @@ const Sankey = Component.extend("sankey", {
 
   _initSettings() {
     this._settings = {
-      nodeWidth: 15,
       labelPadding: 5,
       iconMargin: 5,
       gradientTransitionDuration: 300,
@@ -98,16 +97,19 @@ const Sankey = Component.extend("sankey", {
 
     this._profiles = {
       small: {
+        nodeWidth: 15,
         iconSize: 16,
         nodePadding: 3,
         margin: { top: 10, left: 10, bottom: 10, right: 10 },
       },
       medium: {
+        nodeWidth: 17,
         iconSize: 16,
         nodePadding: 6,
         margin: { top: 10, left: 10, bottom: 10, right: 10 },
       },
       large: {
+        nodeWidth: 19,
         iconSize: 16,
         nodePadding: 10,
         margin: { top: 10, left: 10, bottom: 10, right: 10 },
@@ -115,8 +117,12 @@ const Sankey = Component.extend("sankey", {
     };
 
     this._presentationProfiles = {
-      medium: {},
-      large: {},
+      medium: Object.assign({}, this._profiles.medium, {
+        nodeWidth: 22,
+      }),
+      large: Object.assign({}, this._profiles.large, {
+        nodeWidth: 25,
+      }),
     };
 
     this._css = {
@@ -216,9 +222,7 @@ const Sankey = Component.extend("sankey", {
   },
 
   _initSankey() {
-    this._sankey = sankey()
-      .nodeWidth(this._settings.nodeWidth)
-      .nodePadding(this._activeProfile.nodePadding);
+    this._sankey = sankey();
 
     this._linksContainer = this._svg.select(this._css.dot(this._css.classes.linksContainer));
     this._gradientLinksContainer = this._svg.select(this._css.dot(this._css.classes.gradientLinksContainer));
@@ -259,6 +263,10 @@ const Sankey = Component.extend("sankey", {
     const footerBBox = this._footer.node().getBBox();
 
     this._sankey
+      .nodePadding(this._activeProfile.nodePadding)
+      .nodeWidth(this._activeProfile.nodeWidth);
+
+    this._sankey
       .extent([[
         this._activeProfile.margin.left,
         this._activeProfile.margin.top * 2 + headerBBox.height,
@@ -269,9 +277,6 @@ const Sankey = Component.extend("sankey", {
   },
 
   _redraw() {
-    this._sankey
-      .nodePadding(this._activeProfile.nodePadding);
-
     this._sankey(this._graph);
 
     this._getAnimationDuration();
@@ -532,9 +537,8 @@ const Sankey = Component.extend("sankey", {
         .attr("y", (d.y1 + d.y0) / 2)
         .attr("dy", "0.35em")
         .attr("text-anchor", textAnchor)
+        .style("font-size", `${_this.model.ui.presentation ? 16 : 12}px`)
         .text(_this._entities.label[d.name]);
-
-      return view;
     };
 
     mergedNodes.select(this._css.dot(this._css.classes.defaultText))
