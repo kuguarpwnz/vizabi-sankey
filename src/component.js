@@ -51,8 +51,10 @@ const Sankey = Component.extend("sankey", {
         this._updateValues()
           .then(() => this._redraw()),
 
-      "change:markerEntities.select": () =>
-        this._highlightEntities(),
+      "change:markerEntities.select": () => {
+        this._highlightEntities();
+        this._updateAllLabelsOpacity();
+      },
     };
 
     this._super(config, context);
