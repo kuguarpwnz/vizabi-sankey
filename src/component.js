@@ -55,6 +55,12 @@ const Sankey = Component.extend("sankey", {
         this._highlightEntities();
         this._updateAllLabelsOpacity();
       },
+
+      "change:markerEntities.highlight": () => {
+        this._unhighlightEntities();
+        this._highlightEntities();
+        this._updateAllLabelsOpacity();
+      },
     };
 
     this._super(config, context);
@@ -501,10 +507,7 @@ const Sankey = Component.extend("sankey", {
         d3.select(this).select("text").style("visibility", "visible");
       })
       .on("mouseout", function(d) {
-        _this._gradientLinks
-          .interrupt()
-          .style("opacity", 0)
-          .each(_this._setDash);
+        _this._unhighlightEntities();
 
         _this._highlightEntities();
 
@@ -574,9 +577,16 @@ const Sankey = Component.extend("sankey", {
   },
 
   _updateLabelOpacity(d, view) {
+    const { markerEntities } = this.model;
+
     const nodeHeightWithPadding = this._getNodeHeight(d) + this._activeProfile.nodePadding;
-    const isSelected = this.model.markerEntities.isSelected(d);
-    const visibility = nodeHeightWithPadding >= view.node().getBBox().height || isSelected ? null : "hidden";
+    const visibility = (
+      nodeHeightWithPadding >= view.node().getBBox().height
+      || markerEntities.isSelected(d)
+      || markerEntities.isHighlighted(d) ?
+        null :
+        "hidden"
+    );
 
     view
       .style("visibility", visibility);
@@ -670,19 +680,30 @@ const Sankey = Component.extend("sankey", {
   },
 
   _highlightEntities() {
+    const _this = this;
+
     const { markerEntities } = this.model;
     const areSomeSelected = markerEntities.getSelected().length;
 
-    const _this = this;
     this._nodes
       .each(function(d) {
         const isSelected = markerEntities.isSelected(d);
+        const isHighlighted = markerEntities.isHighlighted(d);
 
         d3.select(this)
           .classed("darkened", areSomeSelected && !isSelected);
 
-        isSelected && _this._highlightBranches(d);
+        if (isSelected || isHighlighted) {
+          _this._highlightBranches(d, isHighlighted);
+        }
       });
+  },
+
+  _unhighlightEntities() {
+    this._gradientLinks
+      .interrupt()
+      .style("opacity", 0)
+      .each(this._setDash);
   },
 
   _makeMaxValuesGraph() {
