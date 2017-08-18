@@ -482,6 +482,8 @@ const Sankey = Component.extend("sankey", {
   _redrawNodes() {
     const _this = this;
 
+    const { markerEntities } = this.model;
+
     const nodes = this._nodesContainer.selectAll(this._css.dot(this._css.classes.node))
       .data(this._graph.nodes);
 
@@ -501,19 +503,9 @@ const Sankey = Component.extend("sankey", {
     const mergedNodes = this._nodes = nodes.merge(nodesEnter);
 
     mergedNodes
-      .on("mouseover", function(d) {
-        _this._highlightBranches(d, true);
-
-        d3.select(this).select("text").style("visibility", "visible");
-      })
-      .on("mouseout", function(d) {
-        _this._unhighlightEntities();
-
-        _this._highlightEntities();
-
-        _this._updateLabelOpacity(d, d3.select(this).select("text"));
-      })
-      .on("click", d => this.model.markerEntities.selectMarker(d));
+      .on("mouseover", d => markerEntities.highlightMarker(d))
+      .on("mouseout", d => markerEntities.clearHighlighted(d))
+      .on("click", d => markerEntities.selectMarker(d));
 
     mergedNodes.select("rect")
       .transition().duration(this._duration)
@@ -694,7 +686,7 @@ const Sankey = Component.extend("sankey", {
           .classed("darkened", areSomeSelected && !isSelected);
 
         if (isSelected || isHighlighted) {
-          _this._highlightBranches(d, isHighlighted);
+          _this._highlightBranches(d, isHighlighted && !isSelected);
         }
       });
   },
