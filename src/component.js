@@ -573,7 +573,8 @@ const Sankey = Component.extend("sankey", {
 
   _updateLabelOpacity(d, view) {
     const nodeHeightWithPadding = this._getNodeHeight(d) + this._activeProfile.nodePadding;
-    const visibility = nodeHeightWithPadding >= view.node().getBBox().height ? null : "hidden";
+    const isSelected = this.model.markerEntities.isSelected(d);
+    const visibility = nodeHeightWithPadding >= view.node().getBBox().height || isSelected ? null : "hidden";
 
     view
       .style("visibility", visibility);
