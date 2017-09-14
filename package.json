@@ -1,10 +1,24 @@
 {
   "name": "vizabi-sankey",
+  "version": "1.0.0",
+  "description": "Sankey diagram tool for Vizabi",
   "main": "build/sankey.js",
+  "keywords": [],
+  "author": "",
   "files": [
     "build"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vizabi/vizabi-sankey.git"
+  },
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vizabi/vizabi-sankey/issues"
+  },
+  "homepage": "https://github.com/vizabi/vizabi-barrankchart#readme",
   "scripts": {
+    "start": "webpack-dev-server",
     "link": "npm link ../vizabi",
     "build": "cross-env NODE_ENV=production webpack --progress",
     "deploy": "tool-deploy"
