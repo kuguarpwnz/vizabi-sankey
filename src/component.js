@@ -27,11 +27,11 @@ const Sankey = Component.extend("sankey", {
       },
       {
         name: "marker",
-        type: "model"
+        type: "marker"
       },
       {
         name: "markerEntities",
-        type: "model"
+        type: "marker"
       },
       {
         name: "locale",
