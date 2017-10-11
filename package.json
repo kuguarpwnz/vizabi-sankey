@@ -1,6 +1,6 @@
 {
   "name": "vizabi-sankey",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Sankey diagram tool for Vizabi",
   "main": "build/sankey.js",
   "keywords": [],
