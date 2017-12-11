@@ -18,14 +18,6 @@ const Sankey = Component.extend("sankey", {
         type: "time"
       },
       {
-        name: "entities",
-        type: "entities"
-      },
-      {
-        name: "entitiesAll",
-        type: "entities"
-      },
-      {
         name: "marker",
         type: "marker"
       },
@@ -235,6 +227,8 @@ const Sankey = Component.extend("sankey", {
     this._redrawHeader();
     this._redrawFooter();
     this._resizeSankey();
+    this.sizeDataKeys = this.model.marker.size.getDataKeys();
+    this.markers = this.model.marker.getKeys();
     this._makeMaxValuesGraph()
       .then(() => this._updateValues())
       .then(() => {
@@ -713,16 +707,9 @@ const Sankey = Component.extend("sankey", {
         const currentYearValues = this._allValues[time].size;
 
         Object.keys(currentYearValues)
-          .forEach(sourceKey => {
-            const source = currentYearValues[sourceKey];
-            !index && (result[sourceKey] = {});
-            const resultSource = result[sourceKey];
-
-            Object.keys(source)
-              .forEach(targetKey => {
-                const value = source[targetKey];
-                (!index || resultSource[targetKey] < value) && (resultSource[targetKey] = value);
-              });
+          .forEach(key => {
+            const value = currentYearValues[key];
+            (!index || result[key] < value) && (result[key] = value);
           });
 
         return result;
@@ -759,19 +746,17 @@ const Sankey = Component.extend("sankey", {
   _buildGraph(values) {
     const graph = { nodes: [], links: [] };
 
-    Object.keys(values).forEach(source => {
-      const nested = values[source];
+    this.markers.forEach(key => {
+      const source = key[this.sizeDataKeys[0]];
+      const target = key[this.sizeDataKeys[1]];
 
       graph.nodes.push({ name: source });
+      graph.nodes.push({ name: target });
 
-      Object.keys(nested).forEach(target => {
-        graph.nodes.push({ name: target });
-
-        graph.links.push({
-          source,
-          target,
-          value: nested[target]
-        });
+      graph.links.push({
+        source,
+        target,
+        value: values[utils.getKey(key, this.sizeDataKeys)]
       });
     });
 
@@ -784,7 +769,7 @@ const Sankey = Component.extend("sankey", {
       d.target = graph.nodes.indexOf(d.target);
     });
 
-    const dim = this.model.entitiesAll.getDimension();
+    const dim = utils.unique(this.model.markerEntities._getAllDimensions({ exceptType: "time" }));
     graph.nodes = graph.nodes.map(name => ({ [dim]: name, name }));
 
     return graph;

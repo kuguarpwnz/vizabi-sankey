@@ -13,8 +13,6 @@ export default Vizabi.Tool.extend("Sankey", {
         placeholder: ".vzb-tool-viz",
         model: [
           "state.time",
-          "state.entities_from",
-          "state.entities",
           "state.marker_links",
           "state.marker",
           "locale",
@@ -24,7 +22,7 @@ export default Vizabi.Tool.extend("Sankey", {
       {
         component: Vizabi.Component.get("timeslider"),
         placeholder: ".vzb-tool-timeslider",
-        model: ["state.time", "state.entities_from", "state.marker_links", "ui"]
+        model: ["state.time", "state.marker_links", "ui"]
       },
       {
         component: Vizabi.Component.get("dialogs"),
