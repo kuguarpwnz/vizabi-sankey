@@ -59,6 +59,74 @@ export default Vizabi.Tool.extend("Sankey", {
     this._super(placeholder, externalModel);
   },
 
-  default_model: {}
+  default_model: {
+  
+    state: {
+      time: {
+        "autoconfig": {
+          "type": "time"
+        }
+      },
+      entities: {
+        "autoconfig": {
+          "type": "entity_domain",
+          index: 0,
+          "excludeIDs": ["tag"]
+        }
+      },
+      entities_from: {
+        "autoconfig": {
+          "type": "entity_domain",
+          index: 1,
+          "excludeIDs": ["tag"]
+        }
+      },
+      entities_to: {
+        "autoconfig": {
+          "type": "entity_domain",
+          index: 2,
+          "excludeIDs": ["tag"]
+        }
+      },
+      marker_links: {
+        space: [
+          "entities_from",
+          "entities_to",
+          "time"
+        ],
+        size: {
+          "autoconfig": {
+              index: 0,
+              type: "measure"
+            }
+        }
+      },
+      marker: {
+        space: ["entities"],
+        label: {
+          use: "property",
+          autoconfig: {
+            includeOnlyIDs: ["name"],
+            type: "string"
+          }
+        },
+        color: {
+          "autoconfig": {}
+        }
+      },
+      marker_tags: { space: [], label: {} },
+    },
+    locale: { },
+    ui: {
+      chart: {},
+      buttons: ["find", "moreoptions", "presentation"],
+      dialogs: {
+        popup: ["timedisplay", "find", "moreoptions"],
+        sidebar: ["timedisplay", "find"],
+        moreoptions: ["speed", "about"]
+      },
+      splash: true
+    }
+  }
 
 });
