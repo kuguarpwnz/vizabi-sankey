@@ -72,8 +72,7 @@ const Sankey = Component.extend("sankey", {
     this._svg = this._element.select(this._css.dot(this._css.classes.svg));
     this._defs = this._svg.select("defs");
 
-    const formatNumber = d3.format(",.0f");
-    this._format = d => `${formatNumber(d)} TWh`;
+    this._format = this.model.marker.size.getTickFormatter();
 
     this._translator = this.model.locale.getTFunction();
 
