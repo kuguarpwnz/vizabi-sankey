@@ -112,13 +112,18 @@ export default Vizabi.Tool.extend("Sankey", {
         },
         color: {
           "autoconfig": {}
+        },
+        hook_rank: {
+          "autoconfig": {}
         }
       },
       marker_tags: { space: [], label: {} },
     },
     locale: { },
     ui: {
-      chart: {},
+      chart: {
+        nodeSortingByHook: false //set to true and use "hook_rank" to sort the nodes, set to false or ommit for automatic sorting
+      },
       buttons: ["find", "moreoptions", "presentation"],
       dialogs: {
         popup: ["timedisplay", "find", "moreoptions"],

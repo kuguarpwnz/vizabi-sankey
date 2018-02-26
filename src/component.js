@@ -213,7 +213,8 @@ const Sankey = Component.extend("sankey", {
   },
 
   _initSankey() {
-    this._sankey = sankey();
+    this._sankey = sankey()
+      .disableNodeSorting(this.model.ui.chart.nodeSortingByHook);
 
     this._linksContainer = this._svg.select(this._css.dot(this._css.classes.linksContainer));
     this._gradientLinksContainer = this._svg.select(this._css.dot(this._css.classes.gradientLinksContainer));
@@ -430,11 +431,11 @@ const Sankey = Component.extend("sankey", {
     const [
       sourceColor,
       targetColor,
-    ] = [
+    ] = [ 
       this._entities.color[d.source.name],
       this._entities.color[d.target.name],
     ].map(color => color.replace("#", ""));
-
+ 
     const id = `c-${sourceColor}-to-${targetColor}`;
     if (!this._defs.select("#" + id).node()) {
       const gradient = this._defs
@@ -727,8 +728,8 @@ const Sankey = Component.extend("sankey", {
   _getValues() {
     return Promise.all([
       new Promise(resolve =>
-        this.model.markerEntities.getFrame(this.model.time.value, ({ color, label }) =>
-          resolve(Object.assign(this, { _entities: { color, label } }))
+        this.model.markerEntities.getFrame(this.model.time.value, ({ color, label, hook_rank }) =>
+          resolve(Object.assign(this, { _entities: { color, label, hook_rank } }))
         )
       ),
       new Promise(resolve => {
@@ -763,6 +764,9 @@ const Sankey = Component.extend("sankey", {
     graph.nodes = graph.nodes
       .map(d => d.name)
       .filter((v, i, a) => i === a.indexOf(v));
+    
+    if (this.model.ui.chart.nodeSortingByHook)
+      graph.nodes = graph.nodes.sort((a,b) => d3.ascending(+this._entities.hook_rank[a], +this._entities.hook_rank[b]));
 
     graph.links.forEach(d => {
       d.source = graph.nodes.indexOf(d.source);
@@ -771,7 +775,8 @@ const Sankey = Component.extend("sankey", {
 
     const dim = utils.unique(this.model.markerEntities._getAllDimensions({ exceptType: "time" }));
     graph.nodes = graph.nodes.map(name => ({ [dim]: name, name }));
-
+    
+    graph.links.sort((a,b) => d3.ascending(b.value, a.value));
     return graph;
   },
 
