@@ -392,10 +392,10 @@ const Sankey = Component.extend("sankey", {
     const mergedLinks = this._links = links.merge(linksEnter);
 
     mergedLinks
+      .style("stroke", d => this._createGradientDef(d))
       .transition().duration(this._duration)
       .attr("d", sankeyLinkHorizontal())
-      .attr("stroke-width", d => Math.max(1, d.width))
-      .style("stroke", d => this._createGradientDef(d));
+      .attr("stroke-width", d => Math.max(1, d.width));      
 
     mergedLinks.select("title")
       .text(d => {
