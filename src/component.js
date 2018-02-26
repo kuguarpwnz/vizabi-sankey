@@ -91,19 +91,19 @@ const Sankey = Component.extend("sankey", {
       small: {
         nodeWidth: 15,
         iconSize: 16,
-        nodePadding: 3,
+        nodePadding: 10,
         margin: { top: 10, left: 10, bottom: 10, right: 10 },
       },
       medium: {
         nodeWidth: 17,
         iconSize: 16,
-        nodePadding: 6,
+        nodePadding: 20,
         margin: { top: 10, left: 10, bottom: 10, right: 10 },
       },
       large: {
         nodeWidth: 19,
         iconSize: 16,
-        nodePadding: 10,
+        nodePadding: 30,
         margin: { top: 10, left: 10, bottom: 10, right: 10 },
       },
     };
@@ -526,6 +526,7 @@ const Sankey = Component.extend("sankey", {
       const textAnchor = isRtlText ? "start" : "end";
 
       view
+        .classed("vzb-noexport", true)
         .transition().duration(_this._duration)
         .attr("x", x)
         .attr("y", (d.y1 + d.y0) / 2)
