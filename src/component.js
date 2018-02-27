@@ -776,7 +776,7 @@ const Sankey = Component.extend("sankey", {
     const dim = utils.unique(this.model.markerEntities._getAllDimensions({ exceptType: "time" }));
     graph.nodes = graph.nodes.map(name => ({ [dim]: name, name }));
     
-    graph.links.sort((a,b) => d3.ascending(b.value, a.value));
+    //graph.links.sort((a,b) => d3.ascending(b.value, a.value));
     return graph;
   },
 
