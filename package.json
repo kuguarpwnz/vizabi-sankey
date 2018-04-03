@@ -1,6 +1,6 @@
 {
   "name": "vizabi-sankey",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Sankey diagram tool for Vizabi",
   "main": "build/sankey.js",
   "keywords": [],
@@ -25,7 +25,7 @@
   },
   "devDependencies": {
     "cross-env": "^5.0.1",
-    "vizabi": "^0.25.0-4",
+    "vizabi": "latest",
     "vizabi-tool-bundler": "github:vizabi/vizabi-tool-bundler"
   },
   "dependencies": {
