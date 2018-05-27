@@ -37,7 +37,7 @@ export default Vizabi.Tool.extend("Sankey", {
       {
         component: Vizabi.Component.get("treemenu"),
         placeholder: ".vzb-tool-treemenu",
-        model: ["state.marker_links", "state.marker_tags", "state.time", "locale"]
+        model: ["state.marker_links", "state.time", "locale"]
       },
       {
         component: Vizabi.Component.get("datanotes"),
@@ -116,8 +116,7 @@ export default Vizabi.Tool.extend("Sankey", {
         hook_rank: {
           "autoconfig": {}
         }
-      },
-      marker_tags: { space: [], label: {} },
+      }
     },
     locale: { },
     ui: {
